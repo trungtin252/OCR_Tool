@@ -8,6 +8,9 @@ import {
   ZoomOut,
   RotateCcw,
   FileText,
+  Copy,
+  Download,
+  Check,
 } from "lucide-react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import type { ProductInfo, ReviewWarning } from "../apis/imageApi";
@@ -521,20 +524,138 @@ export function QualityWarnings({ warnings }: QualityWarningsProps) {
   );
 }
 
+// ─── ExportJsonModal ────────────────────────────────────────
+
+interface ExportJsonModalProps {
+  data: any;
+  onClose: () => void;
+  accentColor: AccentColor;
+}
+
+export function ExportJsonModal({
+  data,
+  onClose,
+  accentColor,
+}: ExportJsonModalProps) {
+  const [copied, setCopied] = useState(false);
+  const jsonString = JSON.stringify(data, null, 2);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(jsonString);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Không thể sao chép dữ liệu", err);
+    }
+  };
+
+  const handleDownload = () => {
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const fileName = data?.product_name
+      ? `${data.product_name.toLowerCase().replace(/[^a-z0-9\u00C0-\u1EF9]+/g, "_")}_export.json`
+      : "export.json";
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const colors = ACCENT_CLASSES[accentColor];
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 overflow-y-auto"
+      style={{ backdropFilter: "blur(4px)" }}
+    >
+      <div className="bg-white rounded-xl shadow-2xl overflow-hidden max-w-2xl w-full max-h-[85vh] flex flex-col border border-gray-100 transition-all duration-300">
+        {/* Header */}
+        <div className={`p-4 flex items-center justify-between bg-linear-to-r ${colors.gradient} text-white`}>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">📋</span>
+            <h3 className="text-base font-bold text-white">Xuất dữ liệu JSON</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-full hover:bg-white/20 text-white transition-colors cursor-pointer"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-5 flex-1 overflow-hidden flex flex-col min-h-0 bg-gray-50">
+          <p className="text-xs text-gray-500 mb-3">
+            Dữ liệu kết quả phân tích dạng cấu trúc JSON:
+          </p>
+          <div className="flex-1 min-h-0 relative flex flex-col">
+            <pre className="w-full max-h-[50vh] overflow-auto p-4 rounded-lg bg-neutral-950 border border-neutral-800 text-emerald-400 font-mono text-xs leading-relaxed select-all">
+              {jsonString}
+            </pre>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="p-4 border-t border-gray-100 bg-white flex flex-wrap items-center justify-end gap-3 shrink-0">
+          <button
+            onClick={handleCopy}
+            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium text-sm flex items-center gap-2 transition-all cursor-pointer"
+          >
+            {copied ? (
+              <>
+                <Check className="h-4 w-4 text-green-600" />
+                <span className="text-green-600">Đã sao chép!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4" />
+                <span>Sao chép</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handleDownload}
+            className={`px-4 py-2 bg-linear-to-r ${colors.gradient} text-white rounded-lg font-medium text-sm flex items-center gap-2 hover:shadow-md transition-all cursor-pointer`}
+          >
+            <Download className="h-4 w-4" />
+            <span>Tải xuống (.json)</span>
+          </button>
+
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg font-medium text-sm transition-all cursor-pointer"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── ResultFooter ───────────────────────────────────────────
 
 interface ResultFooterProps {
   confidence?: number; // 0-100 scale
   accentColor: AccentColor;
   onReset: () => void;
+  jsonData?: any;
 }
 
 export function ResultFooter({
   confidence,
   accentColor,
   onReset,
+  jsonData,
 }: ResultFooterProps) {
+  const [isExportOpen, setIsExportOpen] = useState(false);
   const colors = ACCENT_CLASSES[accentColor];
+
   return (
     <>
       {confidence !== undefined && (
@@ -549,12 +670,31 @@ export function ResultFooter({
           </span>
         </div>
       )}
-      <button
-        onClick={onReset}
-        className={`w-full py-3 bg-linear-to-r ${colors.gradient} text-white rounded-lg font-semibold hover:shadow-lg transition-shadow`}
-      >
-        ↺ Tải lên ảnh mới
-      </button>
+      <div className="flex flex-col sm:flex-row gap-3 w-full">
+        <button
+          onClick={onReset}
+          className={`flex-1 py-3 bg-linear-to-r ${colors.gradient} text-white rounded-lg font-semibold hover:shadow-lg hover:scale-[1.01] transition-all duration-200 cursor-pointer`}
+        >
+          ↺ Tải lên ảnh mới
+        </button>
+        {jsonData && (
+          <button
+            onClick={() => setIsExportOpen(true)}
+            className="flex-1 py-3 bg-white text-gray-700 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 hover:shadow-md hover:scale-[1.01] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer animate-fade-in"
+          >
+            <FileText className="h-4 w-4" />
+            Xuất dữ liệu JSON
+          </button>
+        )}
+      </div>
+
+      {isExportOpen && jsonData && (
+        <ExportJsonModal
+          data={jsonData}
+          onClose={() => setIsExportOpen(false)}
+          accentColor={accentColor}
+        />
+      )}
     </>
   );
 }

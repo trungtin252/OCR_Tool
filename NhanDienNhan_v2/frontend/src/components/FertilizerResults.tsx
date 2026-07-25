@@ -311,6 +311,7 @@ export function FertilizerResults({
         }
         accentColor={ACCENT}
         onReset={onReset}
+        jsonData={data}
       />
     </div>
   );

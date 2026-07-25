@@ -279,6 +279,7 @@ export function FishFeedResults({
         }
         accentColor={ACCENT}
         onReset={onReset}
+        jsonData={data}
       />
     </div>
   );
