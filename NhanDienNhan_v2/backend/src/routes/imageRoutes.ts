@@ -13,6 +13,7 @@ import {
   hasExpectedFileSignature,
 } from "../utils/uploadValidation.js";
 import { appConfig } from "../config/env.js";
+import { getErrorMessage, toError } from "../utils/errorUtils.js";
 
 const router = express.Router();
 const uploadImages = createImagesUploadMiddleware({
@@ -115,10 +116,9 @@ router.post(
             : {}),
         },
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Image analysis error:", error);
-      error.message = error.message || "Failed to analyze images";
-      next(error);
+      next(toError(error, "Failed to analyze images"));
     }
   },
 );
@@ -162,11 +162,11 @@ router.post("/test", async (req: Request, res: Response) => {
         totalImages: files.length,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Image analysis error:", error);
     return res.status(500).json({
       success: false,
-      error: error.message || "Failed to analyze images",
+      error: getErrorMessage(error, "Failed to analyze images"),
     });
   }
 });

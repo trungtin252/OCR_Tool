@@ -3,7 +3,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "test": "node --import tsx --test tests/regression.test.ts tests/llmContract.test.ts tests/config.test.ts tests/llmRegistry.test.ts tests/llmGateway.test.ts tests/productAnalysisService.test.ts tests/receiptAnalysisService.test.ts",
+    "test": "node --import tsx --test tests/regression.test.ts tests/llmContract.test.ts tests/config.test.ts tests/llmRegistry.test.ts tests/llmGateway.test.ts tests/productAnalysisService.test.ts tests/receiptAnalysisService.test.ts tests/errorUtils.test.ts",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.tests.json",
     "prettier": "prettier --check .",
     "prettier:fix": "prettier --write .",

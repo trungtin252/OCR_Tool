@@ -1,10 +1,10 @@
 import type { Request, Response, NextFunction } from "express";
-import type AppError from "@backend/utils/AppError";
+import { getErrorMessage, getErrorStatusCode } from "@backend/utils/errorUtils";
 
 // Middleware xử lý lỗi tập trung
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const errorHandler = (
-  err: Error,
+  err: unknown,
   req: Request,
   res: Response,
   next: NextFunction,
@@ -16,8 +16,8 @@ const errorHandler = (
   const statusCode =
     res.statusCode && res.statusCode !== 200
       ? res.statusCode
-      : (err as AppError).statusCode || 500;
-  const message = err.message || "Internal Server Error";
+      : getErrorStatusCode(err) || 500;
+  const message = getErrorMessage(err, "Internal Server Error");
 
   console.error(`Error: ${message}`);
 

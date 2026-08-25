@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from "express";
 import { createImagesUploadMiddleware } from "../middleware/upload.middleware.js";
 import { analyzeReceiptFiles } from "../services/analyze/receiptAnalysisService.js";
+import { toError } from "../utils/errorUtils.js";
 
 const router = express.Router();
 const uploadReceiptFiles = createImagesUploadMiddleware({
@@ -46,10 +47,9 @@ router.post(
           totalImages: analysis.totalImages,
         },
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Receipt analysis error:", error);
-      error.message = error.message || "Failed to analyze receipt images";
-      next(error);
+      next(toError(error, "Failed to analyze receipt images"));
     }
   },
 );

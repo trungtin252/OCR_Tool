@@ -607,6 +607,7 @@ Search và fusion được cô lập trong orchestrator. Lỗi ở nhánh này k
 | `src/services/search/types.ts`                   | Internal search models và metadata types.                            |
 | `src/middleware/error.middleware.ts`             | Error response tập trung.                                            |
 | `src/utils/AppError.ts`                          | Error class có HTTP status.                                          |
+| `src/utils/errorUtils.ts`                        | Chuẩn hóa message/status và chuyển lỗi không rõ kiểu về `Error`.     |
 
 ## 12. Trạng thái và dữ liệu lưu trong tiến trình
 
