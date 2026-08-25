@@ -2,6 +2,8 @@
  * Receipt OCR API — types and call function
  */
 
+import { getApiErrorMessage, getNetworkErrorMessage } from "./apiError";
+
 const API_BASE_URL =
   import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
@@ -112,10 +114,10 @@ export const uploadFilesForReceiptAnalysis = async (
 
     if (!response.ok) {
       try {
-        const err = await response.json();
+        const err = (await response.json()) as unknown;
         return {
           success: false,
-          message: err.error || err.message || `Server error: ${response.status}`,
+          message: getApiErrorMessage(err, `Server error: ${response.status}`),
         };
       } catch {
         return {
@@ -126,10 +128,13 @@ export const uploadFilesForReceiptAnalysis = async (
     }
 
     return await response.json();
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Network error while uploading files",
+      message: getNetworkErrorMessage(
+        error,
+        "Network error while uploading files",
+      ),
     };
   }
 };
