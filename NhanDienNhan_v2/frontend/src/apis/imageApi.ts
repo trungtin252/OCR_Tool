@@ -34,7 +34,9 @@ export interface ResponseMetadata {
 
 export interface ProductInfo {
   success: boolean;
-  category?: ProductCategory;
+  // The model output is preserved as-is and may be a display label rather than
+  // the request's ProductCategory code (for example, "Thuốc trừ bệnh").
+  category?: string;
   message?: string;
   error_code?: string;
   metadata?: ResponseMetadata;
