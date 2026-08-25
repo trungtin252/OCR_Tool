@@ -4,6 +4,7 @@ import {
   createAppConfig,
   DEFAULT_LLM_TIMEOUT_MS,
   DEFAULT_PORT,
+  DEFAULT_SEARCH_CACHE_MAX_ENTRIES,
   DEFAULT_SEARCH_CACHE_TTL_MS,
 } from "../src/config/env.js";
 
@@ -17,6 +18,7 @@ test("environment defaults preserve the existing runtime behavior", () => {
     testEndpointsEnabled: true,
     llmTimeoutMs: DEFAULT_LLM_TIMEOUT_MS,
     searchCacheTtlMs: DEFAULT_SEARCH_CACHE_TTL_MS,
+    searchCacheMaxEntries: DEFAULT_SEARCH_CACHE_MAX_ENTRIES,
   });
 });
 
@@ -28,6 +30,7 @@ test("environment configuration parses valid values without changing semantics",
     ENABLE_TEST_ENDPOINTS: "false",
     LLM_TIMEOUT_MS: "45000",
     SEARCH_CACHE_TTL_MS: "1800000",
+    SEARCH_CACHE_MAX_ENTRIES: "150",
   });
 
   assert.deepEqual(config, {
@@ -37,6 +40,7 @@ test("environment configuration parses valid values without changing semantics",
     testEndpointsEnabled: false,
     llmTimeoutMs: 45000,
     searchCacheTtlMs: 1800000,
+    searchCacheMaxEntries: 150,
   });
 });
 
@@ -45,11 +49,13 @@ test("invalid numeric configuration falls back to safe legacy defaults", () => {
     PORT: "70000",
     LLM_TIMEOUT_MS: "0",
     SEARCH_CACHE_TTL_MS: "not-a-number",
+    SEARCH_CACHE_MAX_ENTRIES: "0",
     ENABLE_TEST_ENDPOINTS: "FALSE",
   });
 
   assert.equal(config.port, DEFAULT_PORT);
   assert.equal(config.llmTimeoutMs, DEFAULT_LLM_TIMEOUT_MS);
   assert.equal(config.searchCacheTtlMs, DEFAULT_SEARCH_CACHE_TTL_MS);
+  assert.equal(config.searchCacheMaxEntries, DEFAULT_SEARCH_CACHE_MAX_ENTRIES);
   assert.equal(config.testEndpointsEnabled, true);
 });

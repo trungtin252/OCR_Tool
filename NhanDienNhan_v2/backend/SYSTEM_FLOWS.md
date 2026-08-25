@@ -103,14 +103,15 @@ Thứ tự trong `src/app.ts`:
 
 ### Biến môi trường
 
-| Biến                    | Mục đích                                                         | Giá trị mặc định |
-| ----------------------- | ---------------------------------------------------------------- | ---------------- |
-| `GEMINI_API_KEY`        | API key cho Gemini OpenAI-compatible endpoint                    | Không có         |
-| `PORT`                  | Cổng HTTP của Express                                            | `5000`           |
-| `CORS_ORIGINS`          | Allowlist origin phân tách bằng dấu phẩy; để trống giữ allow-all | Trống            |
-| `ENABLE_TEST_ENDPOINTS` | Đặt `false` để tắt hai test endpoint                             | Bật              |
-| `LLM_TIMEOUT_MS`        | Timeout cho mỗi request LLM SDK                                  | `60000`          |
-| `SEARCH_CACHE_TTL_MS`   | TTL cache RAM cho kết quả tra cứu, tính bằng mili-giây           | `86400000`       |
+| Biến                       | Mục đích                                                                          | Giá trị mặc định |
+| -------------------------- | --------------------------------------------------------------------------------- | ---------------- |
+| `GEMINI_API_KEY`           | API key cho Gemini OpenAI-compatible endpoint                                     | Không có         |
+| `PORT`                     | Cổng HTTP của Express                                                             | `5000`           |
+| `CORS_ORIGINS`             | Allowlist origin phân tách bằng dấu phẩy; để trống giữ allow-all                  | Trống            |
+| `ENABLE_TEST_ENDPOINTS`    | Đặt `false` để tắt hai test endpoint                                              | Bật              |
+| `LLM_TIMEOUT_MS`           | Timeout cho mỗi request LLM SDK                                                   | `60000`          |
+| `SEARCH_CACHE_TTL_MS`      | TTL cache RAM cho kết quả tra cứu, tính bằng mili-giây                            | `86400000`       |
+| `SEARCH_CACHE_MAX_ENTRIES` | Số kết quả tra cứu phân biệt tối đa giữ trong RAM; đầy thì loại mục thêm sớm nhất | `200`            |
 
 Các biến trên đều có mẫu trong `.env.example`.
 
@@ -342,7 +343,7 @@ Quy ước năm 2 chữ số: `00-40` thuộc 2000, `41-99` thuộc 1900. Ngày 
 6. Provider tìm và parse dữ liệu web thành internal model thống nhất.
 7. Nếu không tìm thấy, trả nguyên bản với `not_found`.
 8. Nếu tìm thấy, gọi `fuseResults(...)` để hợp nhất bằng LLM.
-9. Chỉ cache search result trong 24 giờ; enriched result luôn được tạo riêng cho từng request.
+9. Chỉ cache search result trong 24 giờ và tối đa 200 key; khi đầy, mục được thêm sớm nhất bị loại. Enriched result luôn được tạo riêng cho từng request.
 10. Trả kết quả kèm `search_metadata`.
 
 Mọi lỗi trong orchestrator được bắt lại; kết quả ảnh ban đầu được trả về với `search_status: "failed"`.
@@ -600,7 +601,7 @@ Search và fusion được cô lập trong orchestrator. Lỗi ở nhánh này k
 | `src/config/env.ts`                              | Nạp, parse và chuẩn hóa cấu hình môi trường dùng chung.              |
 | `src/services/search/searchOrchestrator.ts`      | Điều phối provider, cache và fusion.                                 |
 | `src/services/search/httpClient.ts`              | Fetch có timeout, retry, backoff, semaphore.                         |
-| `src/services/search/searchCache.ts`             | Cache Map trong RAM, TTL 24 giờ, cleanup mỗi giờ.                    |
+| `src/services/search/searchCache.ts`             | Cache Map trong RAM, TTL 24 giờ, tối đa 200 key, cleanup mỗi giờ.    |
 | `src/services/search/pesticideProvider.ts`       | Scrape search/detail trang thuốc BVTV.                               |
 | `src/services/search/fertilizerProvider.ts`      | Scrape trang chi tiết phân bón.                                      |
 | `src/services/search/fusionService.ts`           | LLM hợp nhất kết quả ảnh và web.                                     |
@@ -613,7 +614,7 @@ Search và fusion được cô lập trong orchestrator. Lỗi ở nhánh này k
 
 - Backend không có database nội bộ.
 - File upload chỉ tồn tại trong RAM trong vòng đời request.
-- Search cache dùng singleton `Map`, không persist qua restart và không chia sẻ giữa nhiều instance.
+- Search cache dùng singleton `Map`, không persist qua restart và không chia sẻ giữa nhiều instance; giữ tối đa 200 kết quả, sau đó loại mục được thêm sớm nhất.
 - LLM và hai website tra cứu là các phụ thuộc runtime bên ngoài.
 
 ## 13. Build, chạy và deploy

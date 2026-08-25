@@ -5,6 +5,7 @@ dotenv.config({ quiet: true });
 export const DEFAULT_PORT = 5000;
 export const DEFAULT_LLM_TIMEOUT_MS = 60_000;
 export const DEFAULT_SEARCH_CACHE_TTL_MS = 24 * 60 * 60 * 1_000;
+export const DEFAULT_SEARCH_CACHE_MAX_ENTRIES = 200;
 
 type Environment = Readonly<Record<string, string | undefined>>;
 
@@ -15,6 +16,7 @@ export interface AppConfig {
   testEndpointsEnabled: boolean;
   llmTimeoutMs: number;
   searchCacheTtlMs: number;
+  searchCacheMaxEntries: number;
 }
 
 function parsePositiveInteger(
@@ -60,6 +62,10 @@ export function createAppConfig(
     searchCacheTtlMs: parsePositiveInteger(
       environment.SEARCH_CACHE_TTL_MS,
       DEFAULT_SEARCH_CACHE_TTL_MS,
+    ),
+    searchCacheMaxEntries: parsePositiveInteger(
+      environment.SEARCH_CACHE_MAX_ENTRIES,
+      DEFAULT_SEARCH_CACHE_MAX_ENTRIES,
     ),
   };
 }

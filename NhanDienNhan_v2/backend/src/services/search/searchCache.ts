@@ -11,20 +11,28 @@ interface CacheEntry<T> {
   expiresAt: number;
 }
 
-class SearchCache {
+export class SearchCache {
   private readonly store = new Map<string, CacheEntry<unknown>>();
   private readonly ttlMs: number;
+  private readonly maxEntries: number;
+  private readonly now: () => number;
 
-  constructor(ttlMs: number = appConfig.searchCacheTtlMs) {
+  constructor(
+    ttlMs: number = appConfig.searchCacheTtlMs,
+    maxEntries: number = appConfig.searchCacheMaxEntries,
+    now: () => number = () => Date.now(),
+  ) {
     this.ttlMs = ttlMs;
-    // Periodic cleanup to prevent unbounded memory growth
+    this.maxEntries = Math.max(1, maxEntries);
+    this.now = now;
+    // Periodic cleanup for expired entries; the capacity limit bounds live entries.
     setInterval(() => this.cleanup(), CLEANUP_INTERVAL_MS).unref();
   }
 
   get<T>(key: string): T | null {
     const entry = this.store.get(key);
     if (!entry) return null;
-    if (Date.now() > entry.expiresAt) {
+    if (this.now() > entry.expiresAt) {
       this.store.delete(key);
       return null;
     }
@@ -32,10 +40,20 @@ class SearchCache {
   }
 
   set<T>(key: string, value: T): void {
+    this.cleanup();
+
+    if (!this.store.has(key) && this.store.size >= this.maxEntries) {
+      this.evictOldestEntry();
+    }
+
     this.store.set(key, {
       data: value,
-      expiresAt: Date.now() + this.ttlMs,
+      expiresAt: this.now() + this.ttlMs,
     });
+  }
+
+  get size(): number {
+    return this.store.size;
   }
 
   /**
@@ -50,11 +68,18 @@ class SearchCache {
   }
 
   private cleanup(): void {
-    const now = Date.now();
+    const now = this.now();
     for (const [key, entry] of this.store) {
       if (now > entry.expiresAt) {
         this.store.delete(key);
       }
+    }
+  }
+
+  private evictOldestEntry(): void {
+    const oldestKey = this.store.keys().next().value;
+    if (oldestKey !== undefined) {
+      this.store.delete(oldestKey);
     }
   }
 }
