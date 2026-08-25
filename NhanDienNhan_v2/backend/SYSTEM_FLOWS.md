@@ -151,8 +151,8 @@ Query parameters đang được đọc trực tiếp trong route:
 
 1. Multer kiểm tra số file, MIME và kích thước.
 2. Route kiểm tra có ít nhất một file trong `req.files`.
-3. `buildPrompt(category, searchMode === "interactive")` chọn prompt nghiệp vụ.
-4. Buffer ảnh và MIME được chuyển thành hai mảng song song.
+3. Route kiểm tra magic bytes, rồi chuyển buffer ảnh và MIME thành hai mảng song song.
+4. `analyzeProduct(...)` chọn prompt nghiệp vụ và điều phối search gate.
 5. `processImagesWithOpenAI_chatCompletions(...)`:
    - Chuyển từng buffer sang Base64 data URL qua LLM gateway dùng chung.
    - Chọn model/schema qua LLM registry theo category và trạng thái interactive search.
@@ -574,36 +574,37 @@ Search và fusion được cô lập trong orchestrator. Lỗi ở nhánh này k
 
 ## 11. Bản đồ module và trách nhiệm
 
-| File/thư mục                                | Trách nhiệm                                                          |
-| ------------------------------------------- | -------------------------------------------------------------------- |
-| `src/index.ts`                              | Khởi động HTTP server.                                               |
-| `src/app.ts`                                | Khởi tạo Express, middleware và mount route.                         |
-| `src/routes/imageRoutes.ts`                 | HTTP contract và điều phối luồng nhận diện sản phẩm.                 |
-| `src/routes/receiptRoutes.ts`               | HTTP contract, chuyển PDF và điều phối luồng chứng từ.               |
-| `src/services/analyze/imageProcessor.ts`    | Điều phối OCR, parse và format ngày; giữ API hàm cũ cho các route.   |
-| `src/services/analyze/llmRegistry.ts`       | Mapping model/schema/fallback dùng chung cho OCR, test và fusion.    |
-| `src/services/analyze/llmGateway.ts`        | Tạo data URL và gọi Chat Completions có structured output/fallback.  |
-| `src/utils/llmModel.ts`                     | Cấu hình SDK client và Gemini base URL.                              |
-| `src/utils/prompts/productPrompts.ts`       | Prompt cho bốn loại sản phẩm và search decision.                     |
-| `src/utils/prompts/receiptPrompt.ts`        | Prompt OCR đa chứng từ.                                              |
-| `src/validation/baseSchema.ts`              | Response wrapper, error code, confidence, warnings, search decision. |
-| `src/validation/productInfo.ts`             | Zod schema cho pesticide, fertilizer, fish feed, seed.               |
-| `src/validation/receiptInfo.ts`             | Zod schema đa chứng từ đang hoạt động.                               |
-| `src/utils/dateUtils.ts`                    | Parse ngày, thời hạn và tính ngày hết hạn.                           |
-| `src/utils/dateProcessor.ts`                | Áp dụng date utilities lên response sản phẩm và ngày trong chứng từ. |
-| `src/utils/documentReconciler.ts`           | Đối chiếu toán học invoice/delivery note.                            |
-| `src/utils/requestValidation.ts`            | Parse/default/validate query parameters của product endpoint.        |
-| `src/utils/uploadValidation.ts`             | Allowlist MIME, chuẩn hóa MIME và kiểm tra magic bytes upload.       |
-| `src/config/env.ts`                         | Nạp, parse và chuẩn hóa cấu hình môi trường dùng chung.              |
-| `src/services/search/searchOrchestrator.ts` | Điều phối provider, cache và fusion.                                 |
-| `src/services/search/httpClient.ts`         | Fetch có timeout, retry, backoff, semaphore.                         |
-| `src/services/search/searchCache.ts`        | Cache Map trong RAM, TTL 24 giờ, cleanup mỗi giờ.                    |
-| `src/services/search/pesticideProvider.ts`  | Scrape search/detail trang thuốc BVTV.                               |
-| `src/services/search/fertilizerProvider.ts` | Scrape trang chi tiết phân bón.                                      |
-| `src/services/search/fusionService.ts`      | LLM hợp nhất kết quả ảnh và web.                                     |
-| `src/services/search/types.ts`              | Internal search models và metadata types.                            |
-| `src/middleware/error.middleware.ts`        | Error response tập trung.                                            |
-| `src/utils/AppError.ts`                     | Error class có HTTP status.                                          |
+| File/thư mục                                     | Trách nhiệm                                                          |
+| ------------------------------------------------ | -------------------------------------------------------------------- |
+| `src/index.ts`                                   | Khởi động HTTP server.                                               |
+| `src/app.ts`                                     | Khởi tạo Express, middleware và mount route.                         |
+| `src/routes/imageRoutes.ts`                      | HTTP contract và điều phối luồng nhận diện sản phẩm.                 |
+| `src/routes/receiptRoutes.ts`                    | HTTP contract, chuyển PDF và điều phối luồng chứng từ.               |
+| `src/services/analyze/imageProcessor.ts`         | Điều phối OCR, parse và format ngày; giữ API hàm cũ cho các route.   |
+| `src/services/analyze/llmRegistry.ts`            | Mapping model/schema/fallback dùng chung cho OCR, test và fusion.    |
+| `src/services/analyze/llmGateway.ts`             | Tạo data URL và gọi Chat Completions có structured output/fallback.  |
+| `src/services/analyze/productAnalysisService.ts` | Điều phối OCR sản phẩm và search gate, độc lập với HTTP/upload.      |
+| `src/utils/llmModel.ts`                          | Cấu hình SDK client và Gemini base URL.                              |
+| `src/utils/prompts/productPrompts.ts`            | Prompt cho bốn loại sản phẩm và search decision.                     |
+| `src/utils/prompts/receiptPrompt.ts`             | Prompt OCR đa chứng từ.                                              |
+| `src/validation/baseSchema.ts`                   | Response wrapper, error code, confidence, warnings, search decision. |
+| `src/validation/productInfo.ts`                  | Zod schema cho pesticide, fertilizer, fish feed, seed.               |
+| `src/validation/receiptInfo.ts`                  | Zod schema đa chứng từ đang hoạt động.                               |
+| `src/utils/dateUtils.ts`                         | Parse ngày, thời hạn và tính ngày hết hạn.                           |
+| `src/utils/dateProcessor.ts`                     | Áp dụng date utilities lên response sản phẩm và ngày trong chứng từ. |
+| `src/utils/documentReconciler.ts`                | Đối chiếu toán học invoice/delivery note.                            |
+| `src/utils/requestValidation.ts`                 | Parse/default/validate query parameters của product endpoint.        |
+| `src/utils/uploadValidation.ts`                  | Allowlist MIME, chuẩn hóa MIME và kiểm tra magic bytes upload.       |
+| `src/config/env.ts`                              | Nạp, parse và chuẩn hóa cấu hình môi trường dùng chung.              |
+| `src/services/search/searchOrchestrator.ts`      | Điều phối provider, cache và fusion.                                 |
+| `src/services/search/httpClient.ts`              | Fetch có timeout, retry, backoff, semaphore.                         |
+| `src/services/search/searchCache.ts`             | Cache Map trong RAM, TTL 24 giờ, cleanup mỗi giờ.                    |
+| `src/services/search/pesticideProvider.ts`       | Scrape search/detail trang thuốc BVTV.                               |
+| `src/services/search/fertilizerProvider.ts`      | Scrape trang chi tiết phân bón.                                      |
+| `src/services/search/fusionService.ts`           | LLM hợp nhất kết quả ảnh và web.                                     |
+| `src/services/search/types.ts`                   | Internal search models và metadata types.                            |
+| `src/middleware/error.middleware.ts`             | Error response tập trung.                                            |
+| `src/utils/AppError.ts`                          | Error class có HTTP status.                                          |
 
 ## 12. Trạng thái và dữ liệu lưu trong tiến trình
 
