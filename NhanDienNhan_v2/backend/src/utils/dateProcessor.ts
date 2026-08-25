@@ -103,6 +103,24 @@ export function formatDatesInResponse(response: any): any {
       formatted.data = formatDatesInProductInfo(
         formatted.data as ProductInfoWithDates,
       );
+
+      // Receipt/document responses store dates inside data.documents[] rather
+      // than directly on data. Normalize those dates without changing shape.
+      if (Array.isArray(formatted.data.documents)) {
+        formatted.data.documents = formatted.data.documents.map(
+          (document: Record<string, any>) => {
+            if (!document || typeof document !== "object") return document;
+            if (!document.date || typeof document.date !== "string") {
+              return document;
+            }
+
+            const normalizedDate = formatDateString(document.date);
+            return normalizedDate
+              ? { ...document, date: normalizedDate }
+              : document;
+          },
+        );
+      }
     }
 
     return formatDatesInProductInfo(formatted as ProductInfoWithDates);

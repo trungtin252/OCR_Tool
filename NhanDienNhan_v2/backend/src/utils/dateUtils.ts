@@ -10,7 +10,7 @@ export function formatDateString(dateStr: string): string {
   }
 
   // Trim and normalize whitespace and separators (/, ., -)
-  let normalized = dateStr.trim().replace(/[\s.\/-]+/g, " ");
+  const normalized = dateStr.trim().replace(/[\s.\/-]+/g, " ");
 
   // Try to extract numbers from the string
   const numbers = normalized.match(/\d+/g);
@@ -23,19 +23,13 @@ export function formatDateString(dateStr: string): string {
   let month = parseInt(numbers[1]!);
   let year = parseInt(numbers[2]!);
 
-  // Validate day and month
-  if (day < 1 || day > 31 || month < 1 || month > 12) {
-    return "";
-  }
-
   // Handle 2-digit year (yy format)
   if (year < 100) {
     // Assume years 00-40 are 2000s, 41-99 are 1900s
     year = year <= 40 ? 2000 + year : 1900 + year;
   }
 
-  // Validate year (reasonable range)
-  if (year < 1900 || year > 2100) {
+  if (!isValidCalendarDate(day, month, year)) {
     return "";
   }
 
@@ -44,6 +38,29 @@ export function formatDateString(dateStr: string): string {
   const monthStr = String(month).padStart(2, "0");
 
   return `${dayStr}/${monthStr}/${year}`;
+}
+
+function isValidCalendarDate(
+  day: number,
+  month: number,
+  year: number,
+): boolean {
+  if (
+    !Number.isInteger(day) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(year) ||
+    year < 1900 ||
+    year > 2100
+  ) {
+    return false;
+  }
+
+  const candidate = new Date(Date.UTC(year, month - 1, day));
+  return (
+    candidate.getUTCFullYear() === year &&
+    candidate.getUTCMonth() === month - 1 &&
+    candidate.getUTCDate() === day
+  );
 }
 
 /**
@@ -119,20 +136,9 @@ export function calculateExpiryDate(
   const month = parseInt(dateParts[1]!);
   const year = parseInt(dateParts[2]!);
 
-  // Validate date parts
-  if (
-    day < 1 ||
-    day > 31 ||
-    month < 1 ||
-    month > 12 ||
-    year < 1900 ||
-    year > 2100
-  ) {
+  if (!isValidCalendarDate(day, month, year)) {
     return "";
   }
-
-  // Create date object
-  const manufacturingDate = new Date(year, month - 1, day);
 
   // Parse shelf life to get months
   const shelfLifeMonths = parseShelfLife(shelfLifeStr);
@@ -140,9 +146,21 @@ export function calculateExpiryDate(
     return "";
   }
 
-  // Calculate expiry date
-  const expiryDate = new Date(manufacturingDate);
-  expiryDate.setMonth(expiryDate.getMonth() + shelfLifeMonths);
+  // Clamp to the last valid day of the target month instead of allowing
+  // JavaScript Date to roll an end-of-month value into the following month.
+  const rawTargetMonth = month - 1 + shelfLifeMonths;
+  const targetYear = year + Math.floor(rawTargetMonth / 12);
+  const targetMonth = rawTargetMonth % 12;
+  const lastDayOfTargetMonth = new Date(
+    targetYear,
+    targetMonth + 1,
+    0,
+  ).getDate();
+  const expiryDate = new Date(
+    targetYear,
+    targetMonth,
+    Math.min(day, lastDayOfTargetMonth),
+  );
 
   // Format as dd/mm/yyyy
   const expiryDay = String(expiryDate.getDate()).padStart(2, "0");

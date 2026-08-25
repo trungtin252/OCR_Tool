@@ -43,10 +43,7 @@ function parseSearchResultPage(html: string): SearchResultItem[] {
   $(".data-table tbody tr").each((_, row) => {
     const nameCell = $(row).find("td.col-name");
     const name = nameCell.find("a.thuoc-name").text().trim();
-    const activeIngredients = nameCell
-      .find(".thuoc-hoatchat")
-      .text()
-      .trim();
+    const activeIngredients = nameCell.find(".thuoc-hoatchat").text().trim();
     const detailHref = nameCell.find("a.thuoc-name").attr("href") ?? "";
     const detailUrl = detailHref.startsWith("http")
       ? detailHref
@@ -68,7 +65,7 @@ function parseSearchResultPage(html: string): SearchResultItem[] {
  * 1. Exact match (case-insensitive)
  * 2. Normalized match (diacritics stripped)
  * 3. Fuzzy containment in either direction
- * 4. First result as last resort
+ * 4. No result when multiple candidates remain ambiguous
  */
 function pickBestMatch(
   items: SearchResultItem[],
@@ -81,9 +78,7 @@ function pickBestMatch(
   const queryNorm = normalize(query);
 
   // 1. Exact match
-  const exact = items.find(
-    (i) => i.name.toLowerCase().trim() === queryLower,
-  );
+  const exact = items.find((i) => i.name.toLowerCase().trim() === queryLower);
   if (exact) return exact;
 
   // 2. Normalized match
@@ -98,8 +93,12 @@ function pickBestMatch(
   );
   if (fuzzy) return fuzzy;
 
-  // 4. Return first result as fallback
-  return items[0] ?? null;
+  // Do not silently enrich with an unrelated first result.
+  return null;
+}
+
+function normalizeIdentifier(value: string): string {
+  return normalize(value).replace(/[^a-z0-9]/g, "");
 }
 
 // ─── Detail page parser ─────────────────────────────────────
@@ -210,8 +209,12 @@ function parseDetailPage(
     ...(registration_number ? { registration_number } : {}),
     ...(registrant ? { registrant } : {}),
     ...(ingredients.length > 0 ? { ingredients } : {}),
-    ...(target_crops_set.size > 0 ? { target_crops: [...target_crops_set] } : {}),
-    ...(target_pests_set.size > 0 ? { target_pests: [...target_pests_set] } : {}),
+    ...(target_crops_set.size > 0
+      ? { target_crops: [...target_crops_set] }
+      : {}),
+    ...(target_pests_set.size > 0
+      ? { target_pests: [...target_pests_set] }
+      : {}),
     ...(dosage.length > 0 ? { dosage } : {}),
     source_url: sourceUrl,
   };
@@ -219,9 +222,7 @@ function parseDetailPage(
 
 // ─── Provider implementation ─────────────────────────────────
 
-export class PesticideProvider
-  implements SearchProvider<PesticideSearchResult>
-{
+export class PesticideProvider implements SearchProvider<PesticideSearchResult> {
   /**
    * Search strategy (per FEATURE.md):
    * 1. Search by registration_number first if available (more specific)
@@ -290,10 +291,24 @@ export class PesticideProvider
 
     if (!chosen) return null;
 
-    console.log(
-      `[PesticideProvider] Fetching detail: ${chosen.detailUrl}`,
-    );
+    console.log(`[PesticideProvider] Fetching detail: ${chosen.detailUrl}`);
     const detailHtml = await fetchWithRetry(chosen.detailUrl);
-    return parseDetailPage(detailHtml, chosen.detailUrl);
+    const parsedResult = parseDetailPage(detailHtml, chosen.detailUrl);
+
+    if (isRegNum) {
+      const expectedRegistration = normalizeIdentifier(query);
+      const actualRegistration = parsedResult.registration_number
+        ? normalizeIdentifier(parsedResult.registration_number)
+        : "";
+
+      if (!actualRegistration || actualRegistration !== expectedRegistration) {
+        console.warn(
+          `[PesticideProvider] Registration mismatch for query "${query}"; ignoring candidate ${chosen.detailUrl}`,
+        );
+        return null;
+      }
+    }
+
+    return parsedResult;
   }
 }

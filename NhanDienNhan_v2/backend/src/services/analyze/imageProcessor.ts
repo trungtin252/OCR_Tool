@@ -25,6 +25,7 @@ const schemaTypeToModelMap: {
 
 // Change model when error
 const FALLBACK_MODEL = "gemini-2.5-flash";
+const TEST_MODEL = "gemini-3.1-flash-lite";
 
 // deprecated
 export const processImagesWithOpenAI = async (
@@ -204,7 +205,22 @@ export const processImagesWithOpenAI_chatCompletions = async (
       throw new Error("No content received from model.");
     }
 
-    let parsedResponse = isParsed ? JSON.parse(outputText) : outputText;
+    // Keep the established response contract: structured-output is requested
+    // from the provider, but an imperfect model response must not turn into a
+    // server error after the request has otherwise completed successfully.
+    let parsedResponse: unknown = isParsed
+      ? JSON.parse(outputText)
+      : outputText;
+
+    if (isParsed) {
+      const validationResult = targetSchema.safeParse(parsedResponse);
+      if (!validationResult.success) {
+        console.warn(
+          "Model response schema validation failed; returning model output unchanged:",
+          validationResult.error.issues,
+        );
+      }
+    }
 
     // Format dates if requested (independent of isParsed)
     if (formatDates) {
@@ -275,7 +291,7 @@ export const processImagesTest = async (
 
     // Gọi hàm qua client.chat.completions.create
     const response = await client.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: TEST_MODEL,
       messages: [
         {
           role: "user",
@@ -294,7 +310,23 @@ export const processImagesTest = async (
       throw new Error("No content received from model.");
     }
 
-    let parsedResponse = isParsed ? JSON.parse(outputText) : outputText;
+    let parsedResponse: unknown = outputText;
+    if (targetSchema) {
+      const outputObject = JSON.parse(outputText);
+      const validationResult = targetSchema.safeParse(outputObject);
+      if (!validationResult.success) {
+        console.error(
+          "Test model response schema validation failed:",
+          validationResult.error.issues,
+        );
+        throw new Error("Model response does not match the expected schema");
+      }
+      parsedResponse = isParsed
+        ? validationResult.data
+        : JSON.stringify(validationResult.data);
+    } else if (isParsed || formatDates) {
+      parsedResponse = JSON.parse(outputText);
+    }
 
     // Format dates if requested (independent of isParsed)
     if (formatDates) {

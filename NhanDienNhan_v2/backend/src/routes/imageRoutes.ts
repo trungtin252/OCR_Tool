@@ -1,13 +1,21 @@
 import express, { Request, Response, NextFunction } from "express";
 import multer from "multer";
-import { SchemaType } from "../validation/types.js";
 import {
-  processImagesWithOpenAI,
   processImagesWithOpenAI_chatCompletions,
   processImagesTest,
 } from "../services/analyze/imageProcessor.js";
 import { buildPrompt, test_prompt } from "../utils/prompts/productPrompts.js";
 import { enrichWithSearch } from "../services/search/index.js";
+import {
+  parseBooleanQuery,
+  parseProductSchemaType,
+  parseSearchMode,
+} from "../utils/requestValidation.js";
+import {
+  getCanonicalImageMime,
+  hasExpectedFileSignature,
+  isSupportedUploadMime,
+} from "../utils/uploadValidation.js";
 
 const router = express.Router();
 
@@ -19,15 +27,18 @@ const upload = multer({
   storage: storage,
   fileFilter: (req, file, cb) => {
     console.log("File field name:", file.fieldname, "MIME:", file.mimetype);
-    // Only accept image files
-    if (file.mimetype.startsWith("image/")) {
+    // Only accept image formats supported by the LLM data URL mapper.
+    if (isSupportedUploadMime(file.mimetype, false)) {
       cb(null, true);
     } else {
-      cb(new Error("Only image files are allowed"));
+      cb(new Error("Only JPEG, PNG, GIF, and WebP images are allowed"));
     }
   },
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
+    files: 10,
+    fields: 10,
+    parts: 20,
   },
 });
 
@@ -50,11 +61,13 @@ const handleMulterError = (
       return res.status(400).json({
         success: false,
         error: "File size exceeds 10MB limit",
+        message: "File size exceeds 10MB limit",
       });
     }
     return res.status(400).json({
       success: false,
       error: err.message || "File upload error",
+      message: err.message || "File upload error",
     });
   }
 
@@ -62,11 +75,34 @@ const handleMulterError = (
     return res.status(400).json({
       success: false,
       error: err.message || "File upload failed",
+      message: err.message || "File upload failed",
     });
   }
 
   next();
 };
+
+function sendBadRequest(res: Response, error: string) {
+  return res.status(400).json({
+    success: false,
+    error,
+    message: error,
+  });
+}
+
+function requireTestEndpointsEnabled(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  if (process.env.ENABLE_TEST_ENDPOINTS === "false") {
+    return res.status(404).json({
+      success: false,
+      message: "Route not found",
+    });
+  }
+  next();
+}
 
 // POST endpoint for default image analysis (accepts 1-10 images)
 router.post("/analyze", (req: Request, res: Response, next: NextFunction) => {
@@ -88,20 +124,23 @@ router.post(
           success: false,
           error:
             "No image files provided. Make sure to send files with field name 'images'",
+          message:
+            "No image files provided. Make sure to send files with field name 'images'",
         });
       }
-      const schemaType: SchemaType = req.query.category as SchemaType;
-      const isParsed = req.query.parsed === "true";
-      const formatDates = req.query.formatDates === "true";
+      const schemaType = parseProductSchemaType(req.query.category);
+      if (!schemaType) {
+        return sendBadRequest(
+          res,
+          "Invalid category. Supported values: pesticide, fertilizer, fish_feed, seed",
+        );
+      }
+
+      const isParsed = parseBooleanQuery(req.query.parsed);
+      const formatDates = parseBooleanQuery(req.query.formatDates);
 
       // ── Search mode ──────────────────────────────────────────────
-      const querySearchMode = req.query.searchMode;
-      const searchMode: "always" | "interactive" | "none" =
-        querySearchMode === "always"
-          ? "always"
-          : querySearchMode === "interactive"
-            ? "interactive"
-            : "none";
+      const searchMode = parseSearchMode(req.query.searchMode);
       // ─────────────────────────────────────────────────────────────
 
       console.log(
@@ -115,6 +154,16 @@ router.post(
 
       const files = req.files as Express.Multer.File[];
 
+      const invalidFile = files.find(
+        (file) => !hasExpectedFileSignature(file.buffer, file.mimetype),
+      );
+      if (invalidFile) {
+        return sendBadRequest(
+          res,
+          `File '${invalidFile.originalname}' content does not match a supported image format`,
+        );
+      }
+
       console.log("Files received:", files.length);
 
       // buildPrompt selects the correct base prompt and embeds the search
@@ -122,7 +171,9 @@ router.post(
       const prompt = buildPrompt(schemaType, searchMode === "interactive");
 
       const imageBuffers = files.map((file) => file.buffer);
-      const imageTypes = files.map((file) => file.mimetype);
+      const imageTypes = files.map(
+        (file) => getCanonicalImageMime(file.mimetype)!,
+      );
 
       const result = await processImagesWithOpenAI_chatCompletions(
         imageBuffers,
@@ -223,14 +274,18 @@ router.post(
 );
 
 // POST endpoint for testing with custom prompt
-router.post("/test", (req: Request, res: Response, next: NextFunction) => {
-  upload.array("images", 10)(req, res, (err) => {
-    if (err) {
-      return handleMulterError(err, req, res, next);
-    }
-    next();
-  });
-});
+router.post(
+  "/test",
+  requireTestEndpointsEnabled,
+  (req: Request, res: Response, next: NextFunction) => {
+    upload.array("images", 10)(req, res, (err) => {
+      if (err) {
+        return handleMulterError(err, req, res, next);
+      }
+      next();
+    });
+  },
+);
 
 router.post("/test", async (req: Request, res: Response) => {
   try {
@@ -240,6 +295,8 @@ router.post("/test", async (req: Request, res: Response) => {
         success: false,
         error:
           "No image files provided. Make sure to send files with field name 'images'",
+        message:
+          "No image files provided. Make sure to send files with field name 'images'",
       });
     }
     const schemaType = "";
@@ -247,12 +304,23 @@ router.post("/test", async (req: Request, res: Response) => {
 
     const files = req.files as Express.Multer.File[];
 
+    const invalidFile = files.find(
+      (file) => !hasExpectedFileSignature(file.buffer, file.mimetype),
+    );
+    if (invalidFile) {
+      return sendBadRequest(
+        res,
+        `File '${invalidFile.originalname}' content does not match a supported image format`,
+      );
+    }
+
     console.log("Files received:", files.length);
 
-    // const prompt = schemaType === "fish_feed" ? feed_prompt : pesticide_prompt;
     const prompt = test_prompt;
     const imageBuffers = files.map((file) => file.buffer);
-    const imageTypes = files.map((file) => file.mimetype);
+    const imageTypes = files.map(
+      (file) => getCanonicalImageMime(file.mimetype)!,
+    );
 
     const result = await processImagesTest(
       imageBuffers,

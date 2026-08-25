@@ -113,5 +113,15 @@ export async function fuseResults(
     throw new Error("[fusionService] No content received from fusion model.");
   }
 
-  return JSON.parse(outputText) as object;
+  const parsedOutput = JSON.parse(outputText);
+  const validationResult = targetSchema.safeParse(parsedOutput);
+  if (!validationResult.success) {
+    console.error(
+      "[fusionService] Response schema validation failed:",
+      validationResult.error.issues,
+    );
+    throw new Error("Fusion response does not match the expected schema");
+  }
+
+  return validationResult.data;
 }

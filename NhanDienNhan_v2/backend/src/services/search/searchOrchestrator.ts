@@ -49,6 +49,8 @@ export async function enrichWithSearch(
     const productName = (data?.["product_name"] as string | null) ?? null;
     const registrationNumber =
       (data?.["registration_number"] as string | null) ?? null;
+    const searchQuery =
+      registrationNumber?.trim() || productName?.trim() || undefined;
 
     // ── Skip if no usable identifiers (per FEATURE.md)
     if (!productName?.trim() && !registrationNumber?.trim()) {
@@ -68,27 +70,35 @@ export async function enrichWithSearch(
     );
 
     // ── Cache hit check
-    type CachedEntry = {
-      searchResult: PesticideSearchResult | FertilizerSearchResult;
-      enriched: object;
-    };
-    const cached = searchCache.get<CachedEntry>(cacheKey);
-    if (cached) {
-      console.log(
-        `[searchOrchestrator] Cache hit for key: ${cacheKey}`,
+    type CachedSearchResult = PesticideSearchResult | FertilizerSearchResult;
+    const cachedSearchResult = searchCache.get<CachedSearchResult>(cacheKey);
+    if (cachedSearchResult) {
+      console.log(`[searchOrchestrator] Cache hit for key: ${cacheKey}`);
+
+      // Fusion output contains image-specific fields (dates, package details,
+      // confidence, warnings). Only reuse the web lookup and fuse it with the
+      // current request to prevent cross-request data contamination.
+      const enriched = await fuseResults(
+        imageExtractionResult,
+        cachedSearchResult,
+        category,
       );
+
       return {
-        enrichedResult: cached.enriched,
+        enrichedResult: enriched,
         searchMetadata: {
           search_status: "enriched" as const,
-          ...(cached.searchResult.source_url ? { source_url: cached.searchResult.source_url } : {}),
-          ...(productName ?? registrationNumber ? { search_query: (productName ?? registrationNumber) as string } : {}),
+          ...(cachedSearchResult.source_url
+            ? { source_url: cachedSearchResult.source_url }
+            : {}),
+          ...(searchQuery ? { search_query: searchQuery } : {}),
         },
       };
     }
 
     // ── Run provider search
-    let searchResult: PesticideSearchResult | FertilizerSearchResult | null = null;
+    let searchResult: PesticideSearchResult | FertilizerSearchResult | null =
+      null;
 
     if (category === "pesticide") {
       searchResult = await pesticideProvider.search(
@@ -110,7 +120,7 @@ export async function enrichWithSearch(
         enrichedResult: original,
         searchMetadata: {
           search_status: "not_found" as const,
-          ...(productName ?? registrationNumber ? { search_query: (productName ?? registrationNumber) as string } : {}),
+          ...(searchQuery ? { search_query: searchQuery } : {}),
         },
       };
     }
@@ -126,17 +136,16 @@ export async function enrichWithSearch(
     );
 
     // ── Cache result
-    searchCache.set<CachedEntry>(cacheKey, {
-      searchResult,
-      enriched,
-    });
+    searchCache.set<CachedSearchResult>(cacheKey, searchResult);
 
     return {
       enrichedResult: enriched,
       searchMetadata: {
         search_status: "enriched" as const,
-        ...(searchResult.source_url ? { source_url: searchResult.source_url } : {}),
-        ...(productName ?? registrationNumber ? { search_query: (productName ?? registrationNumber) as string } : {}),
+        ...(searchResult.source_url
+          ? { source_url: searchResult.source_url }
+          : {}),
+        ...(searchQuery ? { search_query: searchQuery } : {}),
       },
     };
   } catch (err) {

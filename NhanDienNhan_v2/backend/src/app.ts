@@ -5,12 +5,16 @@ import receiptRoutes from "./routes/receiptRoutes";
 import { errorHandler } from "./middleware/error.middleware";
 
 const app = express();
+const configuredCorsOrigins = (process.env.CORS_ORIGINS ?? "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const testEndpointsEnabled = process.env.ENABLE_TEST_ENDPOINTS !== "false";
 
 app.use(
   cors({
-    origin: true, // Cho phép tất cả các origin
-    // Chỉ cho phép frontend origin, ai agent origin
-    // origin: ["http://localhost:3000", "http://localhost:8000"],
+    // Preserve the existing allow-all behavior unless an allowlist is set.
+    origin: configuredCorsOrigins.length > 0 ? configuredCorsOrigins : true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true, // Cho phép cookies/sessions cross-origin
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -28,14 +32,23 @@ app.get("/", (req, res) => {
 });
 
 import { testCallOpenAI } from "@backend/services/analyze/imageProcessor";
-app.post("/test-openai", async (req, res) => {
-  await testCallOpenAI();
-  res.json({ status: "ok", message: "Test completed successfully" });
-});
+if (testEndpointsEnabled) {
+  app.post("/test-openai", async (req, res) => {
+    await testCallOpenAI();
+    res.json({ status: "ok", message: "Test completed successfully" });
+  });
+}
 
 // Health check endpoint
 app.get("/health", (req, res) => {
   res.json({ status: "ok", message: "Server is running" });
+});
+
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: "Route not found",
+  });
 });
 
 app.use(errorHandler);

@@ -132,7 +132,8 @@ Nếu ảnh quá mờ, không đọc được chữ, không phải sản phẩm 
 `;
 
 // test raw result from model for debugging
-// Dựa vào hình ảnh, hãy trích toàn bộ thông tin được in trên nhãn. Hãy cố gắng trích xuất càng nhiều thông tin càng tốt.
+export const test_prompt =
+  "Dựa vào hình ảnh, hãy trích toàn bộ thông tin được in trên nhãn. Hãy cố gắng trích xuất càng nhiều thông tin càng tốt.";
 
 const search_prompt = `
 QUY TẮC QUYẾT ĐỊNH TÌM KIẾM THÊM TRÊN WEB:

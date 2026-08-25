@@ -1,29 +1,35 @@
 {
-    "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1",
-        "prettier": "prettier --check .",
-        "prettier:fix": "prettier --write .",
-        "start": "node --require dotenv/config dist/index.js",
-        "dev": "npx tsx --watch src/index.ts",
-        "build": "node esbuild.js"
-    },
-    "dependencies": {
-        "@types/multer": "^2.1.0",
-        "cheerio": "^1.2.0",
-        "cors": "^2.8.6",
-        "dotenv": "^17.4.2",
-        "esbuild": "^0.28.0",
-        "express": "^5.2.1",
-        "multer": "^2.1.1",
-        "openai": "^6.38.0",
-        "pdf-to-png-converter": "^4.1.1",
-        "turndown": "^7.2.4",
-        "typescript": "^6.0.3",
-        "zod": "^4.4.3"
-    },
-    "devDependencies": {
-        "@types/cors": "^2.8.19",
-        "@types/express": "^5.0.6",
-        "prettier": "^3.8.4"
-    }
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "test": "node --import tsx --test tests/regression.test.ts",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.tests.json",
+    "prettier": "prettier --check .",
+    "prettier:fix": "prettier --write .",
+    "start": "node --require dotenv/config dist/index.js",
+    "dev": "tsx --watch src/index.ts",
+    "build": "node esbuild.js"
+  },
+  "dependencies": {
+    "@types/multer": "^2.1.0",
+    "cheerio": "^1.2.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "esbuild": "^0.28.0",
+    "express": "^5.2.1",
+    "multer": "^2.1.1",
+    "openai": "^6.38.0",
+    "pdf-to-png-converter": "^4.1.1",
+    "turndown": "^7.2.4",
+    "typescript": "^6.0.3",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.20.0",
+    "prettier": "^3.8.4",
+    "tsx": "^4.23.12"
+  }
 }
