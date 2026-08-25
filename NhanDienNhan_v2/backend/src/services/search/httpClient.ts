@@ -2,9 +2,11 @@
 // Rate-limited HTTP client for scraping government databases
 // ============================================================
 
-const DEFAULT_TIMEOUT_MS = 8_000;
-const MAX_RETRIES = 2;
-const CONCURRENCY_LIMIT = 2;
+import { appConfig } from "@backend/config/env";
+
+const DEFAULT_TIMEOUT_MS = appConfig.searchHttpTimeoutMs;
+const MAX_RETRIES = appConfig.searchHttpMaxRetries;
+const CONCURRENCY_LIMIT = appConfig.searchHttpConcurrency;
 
 // Simple semaphore to cap concurrent requests to government sites
 let activeRequests = 0;
@@ -84,7 +86,10 @@ export async function fetchWithRetry(
       }
     }
 
-    throw lastError ?? new Error(`Failed to fetch ${url} after ${MAX_RETRIES + 1} attempts`);
+    throw (
+      lastError ??
+      new Error(`Failed to fetch ${url} after ${MAX_RETRIES + 1} attempts`)
+    );
   } finally {
     releaseSemaphore();
   }

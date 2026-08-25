@@ -112,6 +112,9 @@ Thứ tự trong `src/app.ts`:
 | `LLM_TIMEOUT_MS`           | Timeout cho mỗi request LLM SDK                                                   | `60000`          |
 | `SEARCH_CACHE_TTL_MS`      | TTL cache RAM cho kết quả tra cứu, tính bằng mili-giây                            | `86400000`       |
 | `SEARCH_CACHE_MAX_ENTRIES` | Số kết quả tra cứu phân biệt tối đa giữ trong RAM; đầy thì loại mục thêm sớm nhất | `200`            |
+| `SEARCH_HTTP_TIMEOUT_MS`   | Timeout cho một request HTTP tra cứu web, tính bằng mili-giây                     | `8000`           |
+| `SEARCH_HTTP_MAX_RETRIES`  | Số lần retry sau request đầu tiên cho tra cứu web                                 | `2`              |
+| `SEARCH_HTTP_CONCURRENCY`  | Số request HTTP tra cứu web chạy song song tối đa                                 | `2`              |
 
 Các biến trên đều có mẫu trong `.env.example`.
 
@@ -575,40 +578,40 @@ Search và fusion được cô lập trong orchestrator. Lỗi ở nhánh này k
 
 ## 11. Bản đồ module và trách nhiệm
 
-| File/thư mục                                     | Trách nhiệm                                                          |
-| ------------------------------------------------ | -------------------------------------------------------------------- |
-| `src/index.ts`                                   | Khởi động HTTP server.                                               |
-| `src/app.ts`                                     | Khởi tạo Express, middleware và mount route.                         |
-| `src/routes/imageRoutes.ts`                      | HTTP contract và điều phối upload cho luồng nhận diện sản phẩm.      |
-| `src/routes/receiptRoutes.ts`                    | HTTP contract và điều phối upload cho luồng chứng từ.                |
-| `src/middleware/upload.middleware.ts`            | Multer memory upload, giới hạn và HTTP error contract dùng chung.    |
-| `src/services/analyze/imageProcessor.ts`         | Điều phối OCR, parse và format ngày; giữ API hàm cũ cho các route.   |
-| `src/services/analyze/llmRegistry.ts`            | Mapping model/schema/fallback dùng chung cho OCR, test và fusion.    |
-| `src/services/analyze/llmGateway.ts`             | Tạo data URL và gọi Chat Completions có structured output/fallback.  |
-| `src/services/analyze/productAnalysisService.ts` | Điều phối OCR sản phẩm và search gate, độc lập với HTTP/upload.      |
-| `src/services/analyze/receiptAnalysisService.ts` | Kiểm tra receipt, PDF-to-PNG, OCR chứng từ và đối chiếu số học.      |
-| `src/utils/llmModel.ts`                          | Cấu hình SDK client và Gemini base URL.                              |
-| `src/utils/prompts/productPrompts.ts`            | Prompt cho bốn loại sản phẩm và search decision.                     |
-| `src/utils/prompts/receiptPrompt.ts`             | Prompt OCR đa chứng từ.                                              |
-| `src/validation/baseSchema.ts`                   | Response wrapper, error code, confidence, warnings, search decision. |
-| `src/validation/productInfo.ts`                  | Zod schema cho pesticide, fertilizer, fish feed, seed.               |
-| `src/validation/receiptInfo.ts`                  | Zod schema đa chứng từ đang hoạt động.                               |
-| `src/utils/dateUtils.ts`                         | Parse ngày, thời hạn và tính ngày hết hạn.                           |
-| `src/utils/dateProcessor.ts`                     | Áp dụng date utilities lên response sản phẩm và ngày trong chứng từ. |
-| `src/utils/documentReconciler.ts`                | Đối chiếu toán học invoice/delivery note.                            |
-| `src/utils/requestValidation.ts`                 | Parse/default/validate query parameters của product endpoint.        |
-| `src/utils/uploadValidation.ts`                  | Allowlist MIME, chuẩn hóa MIME và kiểm tra magic bytes upload.       |
-| `src/config/env.ts`                              | Nạp, parse và chuẩn hóa cấu hình môi trường dùng chung.              |
-| `src/services/search/searchOrchestrator.ts`      | Điều phối provider, cache và fusion.                                 |
-| `src/services/search/httpClient.ts`              | Fetch có timeout, retry, backoff, semaphore.                         |
-| `src/services/search/searchCache.ts`             | Cache Map trong RAM, TTL 24 giờ, tối đa 200 key, cleanup mỗi giờ.    |
-| `src/services/search/pesticideProvider.ts`       | Scrape search/detail trang thuốc BVTV.                               |
-| `src/services/search/fertilizerProvider.ts`      | Scrape trang chi tiết phân bón.                                      |
-| `src/services/search/fusionService.ts`           | LLM hợp nhất kết quả ảnh và web.                                     |
-| `src/services/search/types.ts`                   | Internal search models và metadata types.                            |
-| `src/middleware/error.middleware.ts`             | Error response tập trung.                                            |
-| `src/utils/AppError.ts`                          | Error class có HTTP status.                                          |
-| `src/utils/errorUtils.ts`                        | Chuẩn hóa message/status và chuyển lỗi không rõ kiểu về `Error`.     |
+| File/thư mục                                     | Trách nhiệm                                                           |
+| ------------------------------------------------ | --------------------------------------------------------------------- |
+| `src/index.ts`                                   | Khởi động HTTP server.                                                |
+| `src/app.ts`                                     | Khởi tạo Express, middleware và mount route.                          |
+| `src/routes/imageRoutes.ts`                      | HTTP contract và điều phối upload cho luồng nhận diện sản phẩm.       |
+| `src/routes/receiptRoutes.ts`                    | HTTP contract và điều phối upload cho luồng chứng từ.                 |
+| `src/middleware/upload.middleware.ts`            | Multer memory upload, giới hạn và HTTP error contract dùng chung.     |
+| `src/services/analyze/imageProcessor.ts`         | Điều phối OCR, parse và format ngày; giữ API hàm cũ cho các route.    |
+| `src/services/analyze/llmRegistry.ts`            | Mapping model/schema/fallback dùng chung cho OCR, test và fusion.     |
+| `src/services/analyze/llmGateway.ts`             | Tạo data URL và gọi Chat Completions có structured output/fallback.   |
+| `src/services/analyze/productAnalysisService.ts` | Điều phối OCR sản phẩm và search gate, độc lập với HTTP/upload.       |
+| `src/services/analyze/receiptAnalysisService.ts` | Kiểm tra receipt, PDF-to-PNG, OCR chứng từ và đối chiếu số học.       |
+| `src/utils/llmModel.ts`                          | Cấu hình SDK client và Gemini base URL.                               |
+| `src/utils/prompts/productPrompts.ts`            | Prompt cho bốn loại sản phẩm và search decision.                      |
+| `src/utils/prompts/receiptPrompt.ts`             | Prompt OCR đa chứng từ.                                               |
+| `src/validation/baseSchema.ts`                   | Response wrapper, error code, confidence, warnings, search decision.  |
+| `src/validation/productInfo.ts`                  | Zod schema cho pesticide, fertilizer, fish feed, seed.                |
+| `src/validation/receiptInfo.ts`                  | Zod schema đa chứng từ đang hoạt động.                                |
+| `src/utils/dateUtils.ts`                         | Parse ngày, thời hạn và tính ngày hết hạn.                            |
+| `src/utils/dateProcessor.ts`                     | Áp dụng date utilities lên response sản phẩm và ngày trong chứng từ.  |
+| `src/utils/documentReconciler.ts`                | Đối chiếu toán học invoice/delivery note.                             |
+| `src/utils/requestValidation.ts`                 | Parse/default/validate query parameters của product endpoint.         |
+| `src/utils/uploadValidation.ts`                  | Allowlist MIME, chuẩn hóa MIME và kiểm tra magic bytes upload.        |
+| `src/config/env.ts`                              | Nạp, parse và chuẩn hóa cấu hình môi trường dùng chung.               |
+| `src/services/search/searchOrchestrator.ts`      | Điều phối provider, cache và fusion.                                  |
+| `src/services/search/httpClient.ts`              | Fetch có timeout, retry, backoff, semaphore; ngưỡng cấu hình qua env. |
+| `src/services/search/searchCache.ts`             | Cache Map trong RAM, TTL 24 giờ, tối đa 200 key, cleanup mỗi giờ.     |
+| `src/services/search/pesticideProvider.ts`       | Scrape search/detail trang thuốc BVTV.                                |
+| `src/services/search/fertilizerProvider.ts`      | Scrape trang chi tiết phân bón.                                       |
+| `src/services/search/fusionService.ts`           | LLM hợp nhất kết quả ảnh và web.                                      |
+| `src/services/search/types.ts`                   | Internal search models và metadata types.                             |
+| `src/middleware/error.middleware.ts`             | Error response tập trung.                                             |
+| `src/utils/AppError.ts`                          | Error class có HTTP status.                                           |
+| `src/utils/errorUtils.ts`                        | Chuẩn hóa message/status và chuyển lỗi không rõ kiểu về `Error`.      |
 
 ## 12. Trạng thái và dữ liệu lưu trong tiến trình
 

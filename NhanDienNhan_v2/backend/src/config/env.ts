@@ -6,6 +6,9 @@ export const DEFAULT_PORT = 5000;
 export const DEFAULT_LLM_TIMEOUT_MS = 60_000;
 export const DEFAULT_SEARCH_CACHE_TTL_MS = 24 * 60 * 60 * 1_000;
 export const DEFAULT_SEARCH_CACHE_MAX_ENTRIES = 200;
+export const DEFAULT_SEARCH_HTTP_TIMEOUT_MS = 8_000;
+export const DEFAULT_SEARCH_HTTP_MAX_RETRIES = 2;
+export const DEFAULT_SEARCH_HTTP_CONCURRENCY = 2;
 
 type Environment = Readonly<Record<string, string | undefined>>;
 
@@ -17,6 +20,9 @@ export interface AppConfig {
   llmTimeoutMs: number;
   searchCacheTtlMs: number;
   searchCacheMaxEntries: number;
+  searchHttpTimeoutMs: number;
+  searchHttpMaxRetries: number;
+  searchHttpConcurrency: number;
 }
 
 function parsePositiveInteger(
@@ -28,6 +34,20 @@ function parsePositiveInteger(
   const isValid =
     Number.isSafeInteger(value) &&
     value > 0 &&
+    (maximum === undefined || value <= maximum);
+
+  return isValid ? value : fallback;
+}
+
+function parseNonNegativeInteger(
+  rawValue: string | undefined,
+  fallback: number,
+  maximum?: number,
+): number {
+  const value = Number(rawValue);
+  const isValid =
+    Number.isSafeInteger(value) &&
+    value >= 0 &&
     (maximum === undefined || value <= maximum);
 
   return isValid ? value : fallback;
@@ -66,6 +86,20 @@ export function createAppConfig(
     searchCacheMaxEntries: parsePositiveInteger(
       environment.SEARCH_CACHE_MAX_ENTRIES,
       DEFAULT_SEARCH_CACHE_MAX_ENTRIES,
+    ),
+    searchHttpTimeoutMs: parsePositiveInteger(
+      environment.SEARCH_HTTP_TIMEOUT_MS,
+      DEFAULT_SEARCH_HTTP_TIMEOUT_MS,
+    ),
+    searchHttpMaxRetries: parseNonNegativeInteger(
+      environment.SEARCH_HTTP_MAX_RETRIES,
+      DEFAULT_SEARCH_HTTP_MAX_RETRIES,
+      10,
+    ),
+    searchHttpConcurrency: parsePositiveInteger(
+      environment.SEARCH_HTTP_CONCURRENCY,
+      DEFAULT_SEARCH_HTTP_CONCURRENCY,
+      10,
     ),
   };
 }
