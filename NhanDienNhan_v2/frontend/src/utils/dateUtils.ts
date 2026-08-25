@@ -10,7 +10,7 @@ export function formatDateString(dateStr: string): string {
   }
 
   // Trim and normalize whitespace and separators (/, ., -)
-  let normalized = dateStr.trim().replace(/[\s.\/-]+/g, " ");
+  const normalized = dateStr.trim().replace(/[\s./-]+/g, " ");
 
   // Try to extract numbers from the string
   const numbers = normalized.match(/\d+/g);
@@ -19,8 +19,8 @@ export function formatDateString(dateStr: string): string {
     return "";
   }
 
-  let day = parseInt(numbers[0]);
-  let month = parseInt(numbers[1]);
+  const day = parseInt(numbers[0]);
+  const month = parseInt(numbers[1]);
   let year = parseInt(numbers[2]);
 
   // Validate day and month
@@ -70,7 +70,7 @@ export function parseShelfLife(shelfLifeStr: string): number {
     return 0;
   }
 
-  let value = parseFloat(numberMatch[0]);
+  const value = parseFloat(numberMatch[0]);
 
   // Check for years (năm, year, years)
   if (/(năm|year|years)/.test(normalized)) {

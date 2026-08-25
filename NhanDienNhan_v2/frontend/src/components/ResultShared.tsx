@@ -26,9 +26,9 @@ export interface FieldDisplay {
   label: string;
   key: string;
   icon?: string;
-  value?: any;
+  value?: React.ReactNode;
   isEmpty: boolean;
-  warning?: any;
+  warning?: ReviewWarning;
 }
 
 type AccentColor = "purple" | "blue" | "emerald";
@@ -75,21 +75,25 @@ interface ImageGalleryProps {
 
 export function ImageGallery({ images, accentColor }: ImageGalleryProps) {
   const [selectedImgIndex, setSelectedImgIndex] = useState<number | null>(null);
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  // Result screens are remounted for every upload, so these files are stable
+  // for the lifetime of this gallery and their object URLs can be cleaned up
+  // when it unmounts.
+  const [imageUrls] = useState(() =>
+    images.map((file) => URL.createObjectURL(file)),
+  );
   const [numPages, setNumPages] = useState<number | null>(null);
 
   useEffect(() => {
-    const urls = images.map((file) => URL.createObjectURL(file));
-    setImageUrls(urls);
     return () => {
-      urls.forEach((url) => URL.revokeObjectURL(url));
+      imageUrls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [images]);
+  }, [imageUrls]);
 
-  // Reset page count when switching files
-  useEffect(() => {
+  const selectImage = (index: number) => {
+    if (!imageUrls[index]) return;
     setNumPages(null);
-  }, [selectedImgIndex]);
+    setSelectedImgIndex(index);
+  };
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
@@ -118,7 +122,7 @@ export function ImageGallery({ images, accentColor }: ImageGalleryProps) {
             return (
               <div
                 key={index}
-                onClick={() => url && setSelectedImgIndex(index)}
+                onClick={() => selectImage(index)}
                 className="relative rounded-lg overflow-hidden bg-gray-100 aspect-square cursor-pointer hover:ring-2 hover:ring-purple-500 hover:scale-[1.02] transition-all flex items-center justify-center border border-gray-200"
               >
                 {fileIsPdf ? (
@@ -285,7 +289,7 @@ export function ImageGallery({ images, accentColor }: ImageGalleryProps) {
                 return (
                   <button
                     key={idx}
-                    onClick={() => url && setSelectedImgIndex(idx)}
+                    onClick={() => selectImage(idx)}
                     className={`w-14 h-14 rounded-lg overflow-hidden border-2 shrink-0 transition-all ${
                       selectedImgIndex === idx
                         ? "border-purple-500 scale-110 shadow-lg shadow-purple-500/40"
@@ -378,7 +382,8 @@ export function FieldsGrid({ fields, accentColor }: FieldsGridProps) {
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {fields.map((field) => {
-          const hasWarning = field.warning !== undefined;
+          const warning = field.warning;
+          const hasWarning = warning !== undefined;
           const isOrange = field.isEmpty || hasWarning;
 
           return (
@@ -386,14 +391,14 @@ export function FieldsGrid({ fields, accentColor }: FieldsGridProps) {
               key={field.key}
               className={`rounded-lg p-3 ${isOrange ? "bg-orange-50 border border-orange-200" : `${colors.fieldBg} border ${colors.fieldBorder}`}`}
             >
-              {hasWarning && (
+              {warning && (
                 <div className="mb-2 pb-2 border-b border-orange-200">
                   <p className="text-xs text-orange-600 font-semibold flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
-                    {field.warning.issue}
+                    {warning.issue}
                   </p>
                   <p className="text-xs text-orange-600 mt-1">
-                    {field.warning.message}
+                    {warning.message}
                   </p>
                 </div>
               )}
@@ -527,7 +532,7 @@ export function QualityWarnings({ warnings }: QualityWarningsProps) {
 // ─── ExportJsonModal ────────────────────────────────────────
 
 interface ExportJsonModalProps {
-  data: any;
+  data: ProductInfo;
   onClose: () => void;
   accentColor: AccentColor;
 }
@@ -644,7 +649,7 @@ interface ResultFooterProps {
   confidence?: number; // 0-100 scale
   accentColor: AccentColor;
   onReset: () => void;
-  jsonData?: any;
+  jsonData?: ProductInfo;
 }
 
 export function ResultFooter({

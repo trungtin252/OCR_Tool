@@ -21,7 +21,7 @@ export function getNetContentTitle(unit: string) {
   const normalized = unit.trim().toLowerCase();
 
   return (
-    Object.entries(netContentCategoryMap).find(([_, units]) =>
+    Object.entries(netContentCategoryMap).find(([, units]) =>
       units.includes(normalized),
     )?.[0] || "Dung lượng"
   );
