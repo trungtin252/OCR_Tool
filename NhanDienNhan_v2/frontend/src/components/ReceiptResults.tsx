@@ -1,11 +1,9 @@
 import { useState } from "react";
-import * as XLSX from "xlsx";
 import {
   AlertTriangle,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Download,
   FileText,
   Package,
   RotateCcw,
@@ -20,114 +18,6 @@ import type {
 } from "../apis/receiptApi";
 import { formatCurrency, formatNumber } from "../apis/receiptApi";
 import { ImageGallery } from "./ResultShared";
-
-// ─── Excel Export ─────────────────────────────────────────────────────────────
-
-/**
- * Export each ReceiptDocument as a separate sheet in an XLSX file.
- * Uses SheetJS (xlsx) to generate a valid binary Excel file without warnings.
- */
-function exportToExcel(documents: ReceiptDocument[]) {
-  const wb = XLSX.utils.book_new();
-
-  documents.forEach((doc, idx) => {
-    const title =
-      doc.document_type === "delivery_note"
-        ? `Phiếu xuất ${idx + 1}`
-        : `Hoá đơn ${idx + 1}`;
-
-    const headerRow =
-      doc.document_type === "delivery_note"
-        ? [
-            "Tên sản phẩm",
-            "Mã SP",
-            "Số lô",
-            "KL tịnh/bao",
-            "ĐVT",
-            "Số bao",
-            "Tổng KL (kg)",
-          ]
-        : [
-            "Tên sản phẩm",
-            "Mã SP",
-            "Số lô",
-            "Số lượng",
-            "ĐVT",
-            "Đơn giá",
-            "Thành tiền",
-          ];
-
-    const infoRows: (string | number | null)[][] = [
-      ["Loại chứng từ", doc.document_type === "delivery_note" ? "Phiếu xuất kho" : "Hoá đơn bán hàng"],
-      ["Nhà cung cấp", doc.supplier_name],
-      ["Khách hàng", doc.customer_name],
-      ["Số chứng từ", doc.document_number],
-      ["Ngày", doc.date],
-      ...(doc.document_type === "delivery_note"
-        ? [["Biển số xe", (doc as DeliveryNoteDocument).license_plate] as (string | null)[]]
-        : []),
-      [],
-      headerRow,
-    ];
-
-    const itemRows: (string | number | null)[][] =
-      doc.document_type === "delivery_note"
-        ? (doc as DeliveryNoteDocument).items.map((item) => [
-            item.product_name,
-            item.product_code,
-            item.lot_number,
-            item.net_content,
-            item.net_unit,
-            item.bag_count,
-            item.total_weight,
-          ])
-        : (doc as InvoiceDocument).items.map((item) => [
-            item.product_name,
-            item.product_code,
-            item.lot_number,
-            item.quantity,
-            item.unit,
-            item.unit_price,
-            item.total_amount,
-          ]);
-
-    const summaryRows: (string | number | null)[][] =
-      doc.document_type === "delivery_note"
-        ? [
-            [],
-            ["Tổng số bao", (doc as DeliveryNoteDocument).total_bags],
-            ["Tổng KL (kg)", (doc as DeliveryNoteDocument).total_weight_kg],
-          ]
-        : [[], ["Tổng tiền", (doc as InvoiceDocument).grand_total]];
-
-    const allRows = [...infoRows, ...itemRows, ...summaryRows];
-
-    // Create worksheet from 2D array
-    const ws = XLSX.utils.aoa_to_sheet(allRows);
-
-    // Sheet name limit is 31 characters in Excel
-    const sheetName = title.substring(0, 31);
-
-    // Append sheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  });
-
-  // Generate binary Excel file buffer
-  const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-
-  // Download
-  const blob = new Blob([excelBuffer], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  const now = new Date();
-  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
-  a.download = `phieu_nhap_hang_${dateStr}.xlsx`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
 
 // ─── Warning Helpers ──────────────────────────────────────────────────────────
 
@@ -588,13 +478,6 @@ export function ReceiptResults({ response, files, onReset }: ReceiptResultsProps
 
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-3 pt-2">
-        <button
-          onClick={() => exportToExcel(documents)}
-          className="flex items-center justify-center gap-2 flex-1 py-3 bg-gradient-to-r from-green-600 to-emerald-700 text-white rounded-lg font-semibold hover:shadow-lg transition-shadow"
-        >
-          <Download className="h-4 w-4" />
-          Xuất Excel
-        </button>
         <button
           onClick={onReset}
           className="flex items-center justify-center gap-2 flex-1 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg font-semibold hover:shadow-lg transition-shadow"
