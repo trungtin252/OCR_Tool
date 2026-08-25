@@ -16,6 +16,7 @@ import {
   hasExpectedFileSignature,
   isSupportedUploadMime,
 } from "../utils/uploadValidation.js";
+import { appConfig } from "../config/env.js";
 
 const router = express.Router();
 
@@ -95,7 +96,7 @@ function requireTestEndpointsEnabled(
   res: Response,
   next: NextFunction,
 ) {
-  if (process.env.ENABLE_TEST_ENDPOINTS === "false") {
+  if (!appConfig.testEndpointsEnabled) {
     return res.status(404).json({
       success: false,
       message: "Route not found",

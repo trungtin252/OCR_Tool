@@ -3,13 +3,11 @@ import cors from "cors";
 import imageRoutes from "./routes/imageRoutes";
 import receiptRoutes from "./routes/receiptRoutes";
 import { errorHandler } from "./middleware/error.middleware";
+import { appConfig } from "./config/env";
 
 const app = express();
-const configuredCorsOrigins = (process.env.CORS_ORIGINS ?? "")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-const testEndpointsEnabled = process.env.ENABLE_TEST_ENDPOINTS !== "false";
+const configuredCorsOrigins = appConfig.corsOrigins;
+const testEndpointsEnabled = appConfig.testEndpointsEnabled;
 
 app.use(
   cors({

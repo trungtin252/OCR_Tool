@@ -1,13 +1,5 @@
-import dotenv from "dotenv";
 import OpenAI from "openai";
-
-dotenv.config();
-
-const configuredTimeout = Number(process.env.LLM_TIMEOUT_MS);
-const llmTimeoutMs =
-  Number.isFinite(configuredTimeout) && configuredTimeout > 0
-    ? configuredTimeout
-    : 60_000;
+import { appConfig } from "@backend/config/env";
 
 // const client = new OpenAI({
 //   apiKey: process.env.wokushop_api_key,
@@ -15,7 +7,7 @@ const llmTimeoutMs =
 // });
 
 export const client = new OpenAI({
-  apiKey: process.env.GEMINI_API_KEY,
+  apiKey: appConfig.geminiApiKey,
   baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-  timeout: llmTimeoutMs,
+  timeout: appConfig.llmTimeoutMs,
 });

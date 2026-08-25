@@ -84,7 +84,8 @@ flowchart TD
 
 ### Điểm vào
 
-- `src/index.ts`: import Express app và lắng nghe tại `process.env.PORT || 5000`.
+- `src/config/env.ts`: nạp `.env` một lần, parse/validate các biến cấu hình và áp dụng default an toàn.
+- `src/index.ts`: import Express app và lắng nghe tại `appConfig.port` (mặc định `5000`).
 - `src/app.ts`: khởi tạo app, middleware, route và error handler.
 - `src/utils/llmModel.ts`: tạo một OpenAI SDK client nhưng trỏ `baseURL` sang Gemini OpenAI-compatible API.
 
@@ -109,6 +110,7 @@ Thứ tự trong `src/app.ts`:
 | `CORS_ORIGINS`          | Allowlist origin phân tách bằng dấu phẩy; để trống giữ allow-all | Trống            |
 | `ENABLE_TEST_ENDPOINTS` | Đặt `false` để tắt hai test endpoint                             | Bật              |
 | `LLM_TIMEOUT_MS`        | Timeout cho mỗi request LLM SDK                                  | `60000`          |
+| `SEARCH_CACHE_TTL_MS`   | TTL cache RAM cho kết quả tra cứu, tính bằng mili-giây           | `86400000`       |
 
 Các biến trên đều có mẫu trong `.env.example`.
 
@@ -120,7 +122,7 @@ Các biến trên đều có mẫu trong `.env.example`.
 | `GET`  | `/health`              | Health check, trả `{ status: "ok", message: "Server is running" }`.                              |
 | `POST` | `/test-openai`         | Gọi prompt kiểm tra tới model; có thể tắt bằng biến môi trường.                                  |
 | `POST` | `/api/image/analyze`   | Nhận 1-10 ảnh nhãn sản phẩm, trích xuất theo category, có thể chuẩn hóa ngày và làm giàu từ web. |
-| `POST` | `/api/image/test`      | Nhận ảnh và dùng prompt raw-test hiện có, với model test được hard-code trong hàm test.           |
+| `POST` | `/api/image/test`      | Nhận ảnh và dùng prompt raw-test hiện có, với model test được hard-code trong hàm test.          |
 | `POST` | `/api/receipt/analyze` | Nhận 1-10 ảnh/PDF chứng từ, OCR đa chứng từ và đối chiếu số học.                                 |
 
 ## 5. Luồng nhận diện nhãn sản phẩm
@@ -591,6 +593,7 @@ Search và fusion được cô lập trong orchestrator. Lỗi ở nhánh này k
 | `src/utils/documentReconciler.ts`           | Đối chiếu toán học invoice/delivery note.                                      |
 | `src/utils/requestValidation.ts`            | Parse/default/validate query parameters của product endpoint.                  |
 | `src/utils/uploadValidation.ts`             | Allowlist MIME, chuẩn hóa MIME và kiểm tra magic bytes upload.                 |
+| `src/config/env.ts`                         | Nạp, parse và chuẩn hóa cấu hình môi trường dùng chung.                        |
 | `src/services/search/searchOrchestrator.ts` | Điều phối provider, cache và fusion.                                           |
 | `src/services/search/httpClient.ts`         | Fetch có timeout, retry, backoff, semaphore.                                   |
 | `src/services/search/searchCache.ts`        | Cache Map trong RAM, TTL 24 giờ, cleanup mỗi giờ.                              |

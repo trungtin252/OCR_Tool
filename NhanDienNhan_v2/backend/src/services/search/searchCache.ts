@@ -2,7 +2,8 @@
 // In-memory TTL cache for government database search results
 // ============================================================
 
-const DEFAULT_TTL_MS = 24 * 60 * 60 * 1_000; // 24 hours
+import { appConfig } from "@backend/config/env";
+
 const CLEANUP_INTERVAL_MS = 60 * 60 * 1_000; // Clean up expired entries every hour
 
 interface CacheEntry<T> {
@@ -14,7 +15,7 @@ class SearchCache {
   private readonly store = new Map<string, CacheEntry<unknown>>();
   private readonly ttlMs: number;
 
-  constructor(ttlMs: number = DEFAULT_TTL_MS) {
+  constructor(ttlMs: number = appConfig.searchCacheTtlMs) {
     this.ttlMs = ttlMs;
     // Periodic cleanup to prevent unbounded memory growth
     setInterval(() => this.cleanup(), CLEANUP_INTERVAL_MS).unref();
