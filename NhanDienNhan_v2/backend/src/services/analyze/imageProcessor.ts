@@ -1,31 +1,19 @@
-import { zodTextFormat, zodResponseFormat } from "openai/helpers/zod";
-import { SchemaType } from "@backend/validation/types";
-import {
-  FishFeedResponseSchema,
-  SeedResponseSchema,
-  PesticideResponseSchema,
-  FertilizerResponseSchema,
-  PesticideResponseSchemaWithSearch,
-  FertilizerResponseSchemaWithSearch,
-} from "@backend/validation/productInfo";
-// import { ReceiptResponseSchema } from "@backend/validation/receiptInfo.old";
-import { DocumentResponseSchema } from "@backend/validation/receiptInfo";
+import { zodTextFormat } from "openai/helpers/zod";
+import type { SchemaType } from "@backend/validation/types";
 import { formatDatesInResponse } from "../../utils/dateProcessor";
 import { client } from "../../utils/llmModel";
-
-const schemaTypeToModelMap: {
-  [key in SchemaType]: string;
-} = {
-  fish_feed: "gemini-3-flash-preview",
-  pesticide: "gemini-3.1-flash-lite",
-  fertilizer: "gemini-3.1-flash-lite",
-  seed: "gemini-3.1-flash-lite",
-  receipt: "gemini-3.1-flash-lite",
-};
-
-// Change model when error
-const FALLBACK_MODEL = "gemini-2.5-flash";
-const TEST_MODEL = "gemini-3.1-flash-lite";
+import {
+  FALLBACK_MODEL,
+  getModelForSchemaType,
+  getResponseSchema,
+  getTestResponseSchema,
+  TEST_MODEL,
+} from "./llmRegistry";
+import {
+  buildChatImageInputs,
+  buildResponsesImageInputs,
+  createStructuredChatCompletion,
+} from "./llmGateway";
 
 // deprecated
 export const processImagesWithOpenAI = async (
@@ -37,35 +25,11 @@ export const processImagesWithOpenAI = async (
   formatDates: boolean = false,
 ) => {
   try {
-    // Convert buffers to base64
-    const base64Images = imageBuffers.map((buffer) =>
-      buffer.toString("base64"),
-    );
-
-    // Map MIME types to data URL prefixes
-    const mimeTypeMap: { [key: string]: string } = {
-      "image/jpeg": "data:image/jpeg;base64,",
-      "image/png": "data:image/png;base64,",
-      "image/gif": "data:image/gif;base64,",
-      "image/webp": "data:image/webp;base64,",
-    };
-
-    interface ImageInput {
-      type: "input_image";
-      image_url: string;
-      detail: "auto" | "low";
-    }
-
-    const imageInputs: ImageInput[] = base64Images.map(
-      (base64Image, index) => ({
-        type: "input_image",
-        image_url: `${mimeTypeMap[imageTypes[index] as string] || "data:image/jpeg;base64,"}${base64Image}`,
-        detail: "auto",
-      }),
-    );
+    const imageInputs = buildResponsesImageInputs(imageBuffers, imageTypes);
+    const targetSchema = getResponseSchema(schemaType);
 
     const response = await client.responses.parse({
-      model: schemaTypeToModelMap[schemaType],
+      model: getModelForSchemaType(schemaType),
       input: [
         {
           role: "user",
@@ -73,18 +37,7 @@ export const processImagesWithOpenAI = async (
         },
       ],
       text: {
-        format: zodTextFormat(
-          schemaType === "fish_feed"
-            ? FishFeedResponseSchema
-            : schemaType === "fertilizer"
-              ? FertilizerResponseSchema
-              : schemaType === "seed"
-                ? SeedResponseSchema
-                : schemaType === "receipt"
-                  ? DocumentResponseSchema
-                  : PesticideResponseSchema,
-          "schema",
-        ),
+        format: zodTextFormat(targetSchema, "schema"),
       },
     });
 
@@ -126,78 +79,19 @@ export const processImagesWithOpenAI_chatCompletions = async (
   withSearchSchema: boolean = false,
 ) => {
   try {
-    // Convert buffers to base64
-    const base64Images = imageBuffers.map((buffer) =>
-      buffer.toString("base64"),
-    );
-
-    // Map MIME types to data URL prefixes
-    const mimeTypeMap: { [key: string]: string } = {
-      "image/jpeg": "data:image/jpeg;base64,",
-      "image/png": "data:image/png;base64,",
-      "image/gif": "data:image/gif;base64,",
-      "image/webp": "data:image/webp;base64,",
-    };
+    const imageInputs = buildChatImageInputs(imageBuffers, imageTypes);
 
     // Định dạng chuẩn của OpenAI Chat Completions cho hình ảnh
-    const imageInputs = base64Images.map((base64Image, index) => ({
-      type: "image_url" as const,
-      image_url: {
-        url: `${mimeTypeMap[imageTypes[index] as string] || "data:image/jpeg;base64,"}${base64Image}`,
-        detail: "auto" as const,
-      },
-    }));
-
     // Lựa chọn schema dựa trên tham số
-    const targetSchema =
-      schemaType === "fish_feed"
-        ? FishFeedResponseSchema
-        : schemaType === "fertilizer"
-          ? withSearchSchema
-            ? FertilizerResponseSchemaWithSearch
-            : FertilizerResponseSchema
-          : schemaType === "seed"
-            ? SeedResponseSchema
-            : schemaType === "receipt"
-              ? DocumentResponseSchema
-              : withSearchSchema
-                ? PesticideResponseSchemaWithSearch
-                : PesticideResponseSchema;
+    const targetSchema = getResponseSchema(schemaType, withSearchSchema);
 
-    // Gọi hàm qua client.chat.completions.create
-    let response;
-    try {
-      response = await client.chat.completions.create({
-        model: schemaTypeToModelMap[schemaType],
-        messages: [
-          {
-            role: "user",
-            content: [{ type: "text", text: prompt }, ...imageInputs],
-          },
-        ],
-        // Sử dụng zodResponseFormat để ép API trả về JSON đúng với schema
-        response_format: zodResponseFormat(targetSchema, "schema_name"),
-      });
-    } catch (error: any) {
-      // Fallback logic for 429 (Too Many Requests) or 503 (Service Unavailable)
-      if (error.status === 429 || error.status === 503) {
-        console.warn(
-          `Primary model ${schemaTypeToModelMap[schemaType]} failed with status ${error.status}. Falling back to ${FALLBACK_MODEL}...`,
-        );
-        response = await client.chat.completions.create({
-          model: FALLBACK_MODEL,
-          messages: [
-            {
-              role: "user",
-              content: [{ type: "text", text: prompt }, ...imageInputs],
-            },
-          ],
-          response_format: zodResponseFormat(targetSchema, "schema_name"),
-        });
-      } else {
-        throw error;
-      }
-    }
+    const response = await createStructuredChatCompletion({
+      model: getModelForSchemaType(schemaType),
+      prompt,
+      imageInputs,
+      responseSchema: targetSchema,
+      fallbackModel: FALLBACK_MODEL,
+    });
 
     const outputText = response.choices[0]?.message?.content;
 
@@ -255,53 +149,18 @@ export const processImagesTest = async (
   formatDates: boolean = false,
 ) => {
   try {
-    // Convert buffers to base64
-    const base64Images = imageBuffers.map((buffer) =>
-      buffer.toString("base64"),
-    );
-
-    // Map MIME types to data URL prefixes
-    const mimeTypeMap: { [key: string]: string } = {
-      "image/jpeg": "data:image/jpeg;base64,",
-      "image/png": "data:image/png;base64,",
-      "image/gif": "data:image/gif;base64,",
-      "image/webp": "data:image/webp;base64,",
-    };
+    const imageInputs = buildChatImageInputs(imageBuffers, imageTypes);
 
     // Định dạng chuẩn của OpenAI Chat Completions cho hình ảnh
-    const imageInputs = base64Images.map((base64Image, index) => ({
-      type: "image_url" as const,
-      image_url: {
-        url: `${mimeTypeMap[imageTypes[index] as string] || "data:image/jpeg;base64,"}${base64Image}`,
-        detail: "auto" as const,
-      },
-    }));
-
     // Lựa chọn schema dựa trên tham số
-    let targetSchema = null;
-    if (schemaType === "fish_feed") {
-      targetSchema = FishFeedResponseSchema;
-    } else if (schemaType === "pesticide") {
-      targetSchema = PesticideResponseSchema;
-    } else if (schemaType === "fertilizer") {
-      targetSchema = FertilizerResponseSchema;
-    } else if (schemaType === "receipt") {
-      targetSchema = DocumentResponseSchema;
-    }
+    const targetSchema = getTestResponseSchema(schemaType);
 
     // Gọi hàm qua client.chat.completions.create
-    const response = await client.chat.completions.create({
+    const response = await createStructuredChatCompletion({
       model: TEST_MODEL,
-      messages: [
-        {
-          role: "user",
-          content: [{ type: "text", text: prompt }, ...imageInputs],
-        },
-      ],
-      // Sử dụng zodResponseFormat để ép API trả về JSON đúng với schema
-      ...(targetSchema && {
-        response_format: zodResponseFormat(targetSchema, "schema_name"),
-      }),
+      prompt,
+      imageInputs,
+      ...(targetSchema ? { responseSchema: targetSchema } : {}),
     });
 
     const outputText = response.choices[0]?.message?.content;
@@ -354,7 +213,7 @@ export const processImagesTest = async (
 
 export const testCallOpenAI = async () => {
   const response = await client.chat.completions.create({
-    model: "gemini-3.1-flash-lite",
+    model: TEST_MODEL,
     messages: [
       { role: "system", content: "You are a helpful assistant." },
       {

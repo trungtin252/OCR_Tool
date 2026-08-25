@@ -1,16 +1,12 @@
 // ============================================================
 // Fusion LLM service — merges image extraction + web search results
 // ============================================================
-import { zodResponseFormat } from "openai/helpers/zod";
 import {
-  PesticideResponseSchema,
-  FertilizerResponseSchema,
-} from "@backend/validation/productInfo.js";
+  FUSION_MODEL,
+  getResponseSchema,
+} from "@backend/services/analyze/llmRegistry";
 import type { PesticideSearchResult, FertilizerSearchResult } from "./types.js";
-import { client } from "@backend/utils/llmModel";
-
-// Use gemini-3.1-flash-lite for the fusion step (good at structured reasoning)
-const FUSION_MODEL = "gemini-3.1-flash-lite";
+import { createStructuredTextCompletion } from "@backend/services/analyze/llmGateway";
 
 // const FUSION_SYSTEM_PROMPT = `You are an expert at merging product information from two sources:
 // 1. "imageExtraction": information extracted by OCR/Vision AI from a product label image
@@ -85,10 +81,7 @@ export async function fuseResults(
   webSearchResult: PesticideSearchResult | FertilizerSearchResult,
   category: "pesticide" | "fertilizer",
 ): Promise<object> {
-  const targetSchema =
-    category === "fertilizer"
-      ? FertilizerResponseSchema
-      : PesticideResponseSchema;
+  const targetSchema = getResponseSchema(category);
 
   const userMessage = JSON.stringify(
     {
@@ -99,13 +92,11 @@ export async function fuseResults(
     2,
   );
 
-  const response = await client.chat.completions.create({
+  const response = await createStructuredTextCompletion({
     model: FUSION_MODEL,
-    messages: [
-      { role: "system", content: FUSION_SYSTEM_PROMPT },
-      { role: "user", content: userMessage },
-    ],
-    response_format: zodResponseFormat(targetSchema, "schema_name"),
+    systemPrompt: FUSION_SYSTEM_PROMPT,
+    userMessage,
+    responseSchema: targetSchema,
   });
 
   const outputText = response.choices[0]?.message?.content;
