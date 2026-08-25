@@ -1,5 +1,5 @@
 import express, { Request, Response, NextFunction } from "express";
-import multer from "multer";
+import { createImagesUploadMiddleware } from "../middleware/upload.middleware.js";
 import { processImagesTest } from "../services/analyze/imageProcessor.js";
 import { analyzeProduct } from "../services/analyze/productAnalysisService.js";
 import { test_prompt } from "../utils/prompts/productPrompts.js";
@@ -11,69 +11,16 @@ import {
 import {
   getCanonicalImageMime,
   hasExpectedFileSignature,
-  isSupportedUploadMime,
 } from "../utils/uploadValidation.js";
 import { appConfig } from "../config/env.js";
 
 const router = express.Router();
-const storage = multer.memoryStorage();
-
-const upload = multer({
-  storage,
-  fileFilter: (req, file, cb) => {
-    console.log("File field name:", file.fieldname, "MIME:", file.mimetype);
-    if (isSupportedUploadMime(file.mimetype, false)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only JPEG, PNG, GIF, and WebP images are allowed"));
-    }
-  },
-  limits: {
-    fileSize: 10 * 1024 * 1024,
-    files: 10,
-    fields: 10,
-    parts: 20,
-  },
+const uploadImages = createImagesUploadMiddleware({
+  allowPdf: false,
+  unsupportedFileMessage: "Only JPEG, PNG, GIF, and WebP images are allowed",
+  fileLogLabel: "File field name:",
+  errorLogLabel: "Multer error details:",
 });
-
-const handleMulterError = (
-  err: any,
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  console.error("Multer error details:", {
-    name: err.name,
-    message: err.message,
-    code: err.code,
-    field: err.field,
-  });
-
-  if (err instanceof multer.MulterError) {
-    if (err.code === "LIMIT_FILE_SIZE") {
-      return res.status(400).json({
-        success: false,
-        error: "File size exceeds 10MB limit",
-        message: "File size exceeds 10MB limit",
-      });
-    }
-    return res.status(400).json({
-      success: false,
-      error: err.message || "File upload error",
-      message: err.message || "File upload error",
-    });
-  }
-
-  if (err) {
-    return res.status(400).json({
-      success: false,
-      error: err.message || "File upload failed",
-      message: err.message || "File upload failed",
-    });
-  }
-
-  next();
-};
 
 function sendBadRequest(res: Response, error: string) {
   return res.status(400).json({
@@ -97,14 +44,7 @@ function requireTestEndpointsEnabled(
   next();
 }
 
-router.post("/analyze", (req: Request, res: Response, next: NextFunction) => {
-  upload.array("images", 10)(req, res, (err) => {
-    if (err) {
-      return handleMulterError(err, req, res, next);
-    }
-    next();
-  });
-});
+router.post("/analyze", uploadImages);
 
 router.post(
   "/analyze",
@@ -183,18 +123,7 @@ router.post(
   },
 );
 
-router.post(
-  "/test",
-  requireTestEndpointsEnabled,
-  (req: Request, res: Response, next: NextFunction) => {
-    upload.array("images", 10)(req, res, (err) => {
-      if (err) {
-        return handleMulterError(err, req, res, next);
-      }
-      next();
-    });
-  },
-);
+router.post("/test", requireTestEndpointsEnabled, uploadImages);
 
 router.post("/test", async (req: Request, res: Response) => {
   try {

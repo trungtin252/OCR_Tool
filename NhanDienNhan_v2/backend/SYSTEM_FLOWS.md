@@ -453,9 +453,9 @@ Endpoint: `POST /api/receipt/analyze`
 
 ### 9.2 Chuỗi xử lý
 
-1. Multer nhận và kiểm tra file.
-2. Với ảnh: đưa buffer và MIME vào danh sách xử lý.
-3. Với PDF: đọc metadata để đếm trang trước, chưa render PNG ở bước kiểm tra.
+1. Middleware upload dùng chung nhận và kiểm tra MIME/kích thước file.
+2. `analyzeReceiptFiles(...)` kiểm tra magic bytes; với ảnh, đưa buffer và MIME vào danh sách xử lý.
+3. Với PDF: service đọc metadata để đếm trang trước, chưa render PNG ở bước kiểm tra.
 4. Kiểm tra tổng số ảnh + trang PDF không vượt quá 10; chỉ sau khi hợp lệ mới render các trang PDF thành PNG tại `viewportScale: 1.0`.
 5. Gọi `processImagesWithOpenAI_chatCompletions` với:
    - `receipt_prompt`.
@@ -578,12 +578,14 @@ Search và fusion được cô lập trong orchestrator. Lỗi ở nhánh này k
 | ------------------------------------------------ | -------------------------------------------------------------------- |
 | `src/index.ts`                                   | Khởi động HTTP server.                                               |
 | `src/app.ts`                                     | Khởi tạo Express, middleware và mount route.                         |
-| `src/routes/imageRoutes.ts`                      | HTTP contract và điều phối luồng nhận diện sản phẩm.                 |
-| `src/routes/receiptRoutes.ts`                    | HTTP contract, chuyển PDF và điều phối luồng chứng từ.               |
+| `src/routes/imageRoutes.ts`                      | HTTP contract và điều phối upload cho luồng nhận diện sản phẩm.      |
+| `src/routes/receiptRoutes.ts`                    | HTTP contract và điều phối upload cho luồng chứng từ.                |
+| `src/middleware/upload.middleware.ts`            | Multer memory upload, giới hạn và HTTP error contract dùng chung.    |
 | `src/services/analyze/imageProcessor.ts`         | Điều phối OCR, parse và format ngày; giữ API hàm cũ cho các route.   |
 | `src/services/analyze/llmRegistry.ts`            | Mapping model/schema/fallback dùng chung cho OCR, test và fusion.    |
 | `src/services/analyze/llmGateway.ts`             | Tạo data URL và gọi Chat Completions có structured output/fallback.  |
 | `src/services/analyze/productAnalysisService.ts` | Điều phối OCR sản phẩm và search gate, độc lập với HTTP/upload.      |
+| `src/services/analyze/receiptAnalysisService.ts` | Kiểm tra receipt, PDF-to-PNG, OCR chứng từ và đối chiếu số học.      |
 | `src/utils/llmModel.ts`                          | Cấu hình SDK client và Gemini base URL.                              |
 | `src/utils/prompts/productPrompts.ts`            | Prompt cho bốn loại sản phẩm và search decision.                     |
 | `src/utils/prompts/receiptPrompt.ts`             | Prompt OCR đa chứng từ.                                              |
