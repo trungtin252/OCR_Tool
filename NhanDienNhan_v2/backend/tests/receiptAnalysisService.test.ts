@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { analyzeReceiptFiles } from "../src/services/analyze/receiptAnalysisService.js";
+import { analyzeReceiptFiles } from "../src/modules/receipt/receipt.service.js";
 
 test("receipt analysis rejects a declared image whose content signature is invalid", async () => {
   const result = await analyzeReceiptFiles([

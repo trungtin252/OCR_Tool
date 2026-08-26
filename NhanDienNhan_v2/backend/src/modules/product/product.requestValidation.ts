@@ -1,4 +1,4 @@
-import type { SchemaType } from "@backend/validation/types";
+import type { SchemaType } from "@backend/shared/contracts/schemaTypes";
 
 export type ProductSchemaType = Exclude<SchemaType, "receipt">;
 export type SearchMode = "always" | "interactive" | "none";

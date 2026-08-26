@@ -1,5 +1,5 @@
 import { zodTextFormat } from "openai/helpers/zod";
-import type { SchemaType } from "@backend/validation/types";
+import type { SchemaType } from "@backend/shared/contracts/schemaTypes";
 import { formatDatesInResponse } from "@backend/shared/postprocessing/dateProcessor";
 import { client } from "@backend/shared/llm/llmModel";
 import {

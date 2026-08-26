@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BaseResponseSchema } from "./baseSchema";
+import { BaseResponseSchema } from "@backend/shared/contracts/baseResponse.schema";
 
 export const BaseDocumentItemSchema = z.object({
   product_name: z.string().nullable().describe("Tên vật tư/sản phẩm (VD: 'TĂ Cá Rô Phi VCD32', 'CON CÒ C5001')"),

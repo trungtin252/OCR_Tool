@@ -1,12 +1,12 @@
 import { pdfToPng } from "pdf-to-png-converter";
-import { reconcileDocumentMath } from "@backend/utils/documentReconciler";
-import { receipt_prompt } from "@backend/utils/prompts/receiptPrompt";
+import { reconcileDocumentMath } from "./receipt.reconciler";
+import { receipt_prompt } from "./receipt.prompts";
 import {
   getCanonicalImageMime,
   hasExpectedFileSignature,
 } from "@backend/shared/upload/uploadValidation";
 import { MAX_UPLOAD_FILE_SIZE_BYTES } from "@backend/shared/upload/limits";
-import { processImagesWithOpenAI_chatCompletions } from "./imageProcessor";
+import { processImagesWithOpenAI_chatCompletions } from "@backend/services/analyze/imageProcessor";
 
 export const MAX_RESOLVED_RECEIPT_IMAGES = 10;
 

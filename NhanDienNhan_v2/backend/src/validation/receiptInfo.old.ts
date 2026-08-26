@@ -1,5 +1,5 @@
 import {z} from "zod";
-import {BaseResponseSchema} from "./baseSchema";
+import {BaseResponseSchema} from "@backend/shared/contracts/baseResponse.schema";
 
 // ==========================================
 // 1. DETAIL SCHEMA: CHI TIẾT TỪNG DÒNG VẬT TƯ

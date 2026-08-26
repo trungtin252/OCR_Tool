@@ -12,7 +12,7 @@ import {
   seed_prompt,
   test_prompt,
 } from "../src/modules/product/product.prompts.js";
-import { receipt_prompt } from "../src/utils/prompts/receiptPrompt.js";
+import { receipt_prompt } from "../src/modules/receipt/receipt.prompts.js";
 import {
   FertilizerResponseSchema,
   FishFeedResponseSchema,
@@ -21,7 +21,7 @@ import {
   FertilizerResponseSchemaWithSearch,
   SeedResponseSchema,
 } from "../src/modules/product/product.schema.js";
-import { DocumentResponseSchema } from "../src/validation/receiptInfo.js";
+import { DocumentResponseSchema } from "../src/modules/receipt/receipt.schema.js";
 
 function sha256(value: string): string {
   return createHash("sha256").update(value, "utf8").digest("hex");

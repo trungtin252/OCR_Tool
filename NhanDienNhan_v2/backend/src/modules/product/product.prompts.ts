@@ -1,4 +1,4 @@
-import type { SchemaType } from "@backend/validation/types";
+import type { SchemaType } from "@backend/shared/contracts/schemaTypes";
 
 export const pesticide_prompt = `
 Dựa vào hình ảnh, hãy trích xuất thông tin sản phẩm thuốc bảo vệ thực vật/thuốc thuỷ sản.

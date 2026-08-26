@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   BaseResponseSchema,
   BaseResponseSchemaWithSearch,
-} from "@backend/validation/baseSchema";
+} from "@backend/shared/contracts/baseResponse.schema";
 
 const unitMap = {
   gram: "Gram",

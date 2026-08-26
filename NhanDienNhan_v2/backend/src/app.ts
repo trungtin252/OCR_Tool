@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import imageRoutes from "./modules/product/product.routes";
-import receiptRoutes from "./routes/receiptRoutes";
+import receiptRoutes from "./modules/receipt/receipt.routes";
 import imageDiagnosticsRoutes from "./diagnostics/imageDiagnostics.routes";
 import { errorHandler } from "./shared/errors/error.middleware";
 import { appConfig } from "./config/env";

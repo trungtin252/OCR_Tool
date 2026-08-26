@@ -8,7 +8,7 @@ import {
   PesticideResponseSchemaWithSearch,
   SeedResponseSchema,
 } from "../src/modules/product/product.schema.js";
-import { DocumentResponseSchema } from "../src/validation/receiptInfo.js";
+import { DocumentResponseSchema } from "../src/modules/receipt/receipt.schema.js";
 import {
   FALLBACK_MODEL,
   FUSION_MODEL,

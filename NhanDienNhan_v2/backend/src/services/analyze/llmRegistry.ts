@@ -1,9 +1,9 @@
-import type { SchemaType } from "@backend/validation/types";
+import type { SchemaType } from "@backend/shared/contracts/schemaTypes";
 import {
   getProductDefinition,
   PRODUCT_DEFINITIONS,
 } from "@backend/modules/product/product.registry";
-import { DocumentResponseSchema } from "@backend/validation/receiptInfo";
+import { DocumentResponseSchema } from "@backend/modules/receipt/receipt.schema";
 import type {
   FertilizerResponseSchema,
   FertilizerResponseSchemaWithSearch,

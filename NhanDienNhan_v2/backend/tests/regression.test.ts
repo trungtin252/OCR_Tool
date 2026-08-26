@@ -16,7 +16,7 @@ import {
   formatDateString,
 } from "../src/shared/postprocessing/dateUtils.js";
 import { formatDatesInResponse } from "../src/shared/postprocessing/dateProcessor.js";
-import { reconcileDocumentMath } from "../src/utils/documentReconciler.js";
+import { reconcileDocumentMath } from "../src/modules/receipt/receipt.reconciler.js";
 import { PesticideDataSchema } from "../src/modules/product/product.schema.js";
 
 test("product category parsing keeps the documented default", () => {
@@ -110,11 +110,12 @@ test("document reconciliation appends warnings without changing response shape",
     },
   };
 
-  const reconciled = reconcileDocumentMath(response);
-  assert.equal(reconciled, response);
-  assert.equal(response.metadata.review_warnings.length, 1);
+  const reconciled = reconcileDocumentMath(response) as typeof response;
+  assert.notEqual(reconciled, response);
+  assert.equal(response.metadata.review_warnings.length, 0);
+  assert.equal(reconciled.metadata.review_warnings.length, 1);
   assert.equal(
-    (response.metadata.review_warnings[0] as { issue: string }).issue,
+    (reconciled.metadata.review_warnings[0] as { issue: string }).issue,
     "MATH_MISMATCH",
   );
 });

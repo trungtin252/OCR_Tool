@@ -1,16 +1,14 @@
-import express, { Request, Response, NextFunction } from "express";
-import { createImagesUploadMiddleware } from "../shared/upload/upload.middleware.js";
-import { analyzeReceiptFiles } from "../services/analyze/receiptAnalysisService.js";
-import { toError } from "../shared/errors/errorUtils.js";
+import type { NextFunction, Request, RequestHandler, Response } from "express";
+import { toError } from "@backend/shared/errors/errorUtils";
+import {
+  analyzeReceiptFiles,
+  type ReceiptAnalysisResult,
+  type ReceiptInputFile,
+} from "./receipt.service";
 
-const router = express.Router();
-const uploadReceiptFiles = createImagesUploadMiddleware({
-  allowPdf: true,
-  unsupportedFileMessage:
-    "Only PDF, JPEG, PNG, GIF, and WebP files are allowed",
-  fileLogLabel: "Receipt file field name:",
-  errorLogLabel: "Multer error details for receipt:",
-});
+export type ReceiptAnalyzer = (
+  files: ReceiptInputFile[],
+) => Promise<ReceiptAnalysisResult>;
 
 function sendBadRequest(res: Response, error: string) {
   return res.status(400).json({
@@ -20,11 +18,10 @@ function sendBadRequest(res: Response, error: string) {
   });
 }
 
-router.post("/analyze", uploadReceiptFiles);
-
-router.post(
-  "/analyze",
-  async (req: Request, res: Response, next: NextFunction) => {
+export function createAnalyzeReceiptHandler(
+  analyzer: ReceiptAnalyzer = analyzeReceiptFiles,
+): RequestHandler {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
         return sendBadRequest(
@@ -35,7 +32,7 @@ router.post(
 
       const files = req.files as Express.Multer.File[];
       console.log("Receipt files received:", files.length);
-      const analysis = await analyzeReceiptFiles(files);
+      const analysis = await analyzer(files);
       if (!analysis.success) {
         return sendBadRequest(res, analysis.error);
       }
@@ -51,7 +48,7 @@ router.post(
       console.error("Receipt analysis error:", error);
       next(toError(error, "Failed to analyze receipt images"));
     }
-  },
-);
+  };
+}
 
-export default router;
+export const analyzeReceiptHandler = createAnalyzeReceiptHandler();
