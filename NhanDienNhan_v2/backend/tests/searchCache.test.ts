@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { SearchCache } from "../src/services/search/searchCache.js";
+import { SearchCache } from "../src/modules/search/searchCache.js";
 
 test("SearchCache normalizes equivalent lookup keys", () => {
   const cache = new SearchCache(60_000, 2);

@@ -2,8 +2,8 @@ import type {
   ProductSchemaType,
   SearchMode,
 } from "@backend/modules/product/product.requestValidation";
-import { enrichWithSearch } from "@backend/services/search";
-import type { SearchMetadata } from "@backend/services/search";
+import { enrichWithSearch } from "@backend/modules/search";
+import type { SearchMetadata } from "@backend/modules/search";
 import { processImagesWithOpenAI_chatCompletions } from "@backend/services/analyze/imageProcessor";
 import { getProductDefinition } from "./product.registry";
 

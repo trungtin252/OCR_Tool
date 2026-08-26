@@ -2,18 +2,13 @@
 // Search orchestrator — ties together providers, cache, and fusion
 // ============================================================
 
-import { PesticideProvider } from "./pesticideProvider.js";
-import { FertilizerProvider } from "./fertilizerProvider.js";
 import { searchCache } from "./searchCache.js";
 import { fuseResults } from "./fusionService.js";
-import type {
-  SearchMetadata,
-  PesticideSearchResult,
-  FertilizerSearchResult,
-} from "./types.js";
-
-const pesticideProvider = new PesticideProvider();
-const fertilizerProvider = new FertilizerProvider();
+import {
+  getSearchProvider,
+  type CachedSearchResult,
+} from "./providerRegistry.js";
+import type { SearchMetadata } from "./types.js";
 
 export interface EnrichmentResult {
   enrichedResult: object;
@@ -70,7 +65,6 @@ export async function enrichWithSearch(
     );
 
     // ── Cache hit check
-    type CachedSearchResult = PesticideSearchResult | FertilizerSearchResult;
     const cachedSearchResult = searchCache.get<CachedSearchResult>(cacheKey);
     if (cachedSearchResult) {
       console.log(`[searchOrchestrator] Cache hit for key: ${cacheKey}`);
@@ -97,20 +91,10 @@ export async function enrichWithSearch(
     }
 
     // ── Run provider search
-    let searchResult: PesticideSearchResult | FertilizerSearchResult | null =
-      null;
-
-    if (category === "pesticide") {
-      searchResult = await pesticideProvider.search(
-        productName,
-        registrationNumber,
-      );
-    } else {
-      searchResult = await fertilizerProvider.search(
-        productName,
-        registrationNumber,
-      );
-    }
+    const searchResult = await getSearchProvider(category).search(
+      productName,
+      registrationNumber,
+    );
 
     if (!searchResult) {
       console.log(

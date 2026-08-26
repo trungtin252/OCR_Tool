@@ -36,7 +36,7 @@ interface SearchResultItem {
 
 // ─── Search result page parser ──────────────────────────────
 
-function parseSearchResultPage(html: string): SearchResultItem[] {
+export function parseSearchResultPage(html: string): SearchResultItem[] {
   const $ = cheerio.load(html);
   const items: SearchResultItem[] = [];
 
@@ -103,7 +103,7 @@ function normalizeIdentifier(value: string): string {
 
 // ─── Detail page parser ─────────────────────────────────────
 
-function parseDetailPage(
+export function parseDetailPage(
   html: string,
   sourceUrl: string,
 ): PesticideSearchResult {

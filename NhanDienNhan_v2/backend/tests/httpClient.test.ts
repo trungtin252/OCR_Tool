@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fetchWithRetry } from "../src/services/search/httpClient.js";
+import { fetchWithRetry } from "../src/modules/search/httpClient.js";
 
 test("fetchWithRetry returns a successful response without retries", async () => {
   const originalFetch = globalThis.fetch;

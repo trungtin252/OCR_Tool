@@ -29,7 +29,7 @@ function sha256(value: string): string {
 
 function extractFusionSystemPrompt(): string {
   const source = readFileSync(
-    resolve(process.cwd(), "src/services/search/fusionService.ts"),
+    resolve(process.cwd(), "src/modules/search/fusionService.ts"),
     "utf8",
   );
   const backtick = String.fromCharCode(96);

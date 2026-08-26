@@ -33,7 +33,7 @@ function hasResult($: cheerio.CheerioAPI): boolean {
   return productName.length > 0;
 }
 
-function parseFertilizerPage(
+export function parseFertilizerPage(
   html: string,
   sourceUrl: string,
 ): FertilizerSearchResult | null {
