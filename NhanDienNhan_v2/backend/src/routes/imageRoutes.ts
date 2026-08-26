@@ -1,5 +1,5 @@
 import express, { Request, Response, NextFunction } from "express";
-import { createImagesUploadMiddleware } from "../middleware/upload.middleware.js";
+import { createImagesUploadMiddleware } from "../shared/upload/upload.middleware.js";
 import { processImagesTest } from "../services/analyze/imageProcessor.js";
 import { analyzeProduct } from "../services/analyze/productAnalysisService.js";
 import { test_prompt } from "../utils/prompts/productPrompts.js";
@@ -11,9 +11,9 @@ import {
 import {
   getCanonicalImageMime,
   hasExpectedFileSignature,
-} from "../utils/uploadValidation.js";
+} from "../shared/upload/uploadValidation.js";
 import { appConfig } from "../config/env.js";
-import { getErrorMessage, toError } from "../utils/errorUtils.js";
+import { getErrorMessage, toError } from "../shared/errors/errorUtils.js";
 
 const router = express.Router();
 const uploadImages = createImagesUploadMiddleware({

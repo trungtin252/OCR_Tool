@@ -10,12 +10,12 @@ import {
   getCanonicalImageMime,
   hasExpectedFileSignature,
   isSupportedUploadMime,
-} from "../src/utils/uploadValidation.js";
+} from "../src/shared/upload/uploadValidation.js";
 import {
   calculateExpiryDate,
   formatDateString,
-} from "../src/utils/dateUtils.js";
-import { formatDatesInResponse } from "../src/utils/dateProcessor.js";
+} from "../src/shared/postprocessing/dateUtils.js";
+import { formatDatesInResponse } from "../src/shared/postprocessing/dateProcessor.js";
 import { reconcileDocumentMath } from "../src/utils/documentReconciler.js";
 import { PesticideDataSchema } from "../src/validation/productInfo.js";
 

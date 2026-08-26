@@ -1,5 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
-import { getErrorMessage, getErrorStatusCode } from "@backend/utils/errorUtils";
+import {
+  getErrorMessage,
+  getErrorStatusCode,
+} from "@backend/shared/errors/errorUtils";
 
 // Middleware xử lý lỗi tập trung
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

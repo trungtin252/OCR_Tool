@@ -6,7 +6,7 @@ import {
   getResponseSchema,
 } from "@backend/services/analyze/llmRegistry";
 import type { PesticideSearchResult, FertilizerSearchResult } from "./types.js";
-import { createStructuredTextCompletion } from "@backend/services/analyze/llmGateway";
+import { createStructuredTextCompletion } from "@backend/shared/llm/llmGateway";
 
 // const FUSION_SYSTEM_PROMPT = `You are an expert at merging product information from two sources:
 // 1. "imageExtraction": information extracted by OCR/Vision AI from a product label image

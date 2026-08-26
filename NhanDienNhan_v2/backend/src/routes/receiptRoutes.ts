@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from "express";
-import { createImagesUploadMiddleware } from "../middleware/upload.middleware.js";
+import { createImagesUploadMiddleware } from "../shared/upload/upload.middleware.js";
 import { analyzeReceiptFiles } from "../services/analyze/receiptAnalysisService.js";
-import { toError } from "../utils/errorUtils.js";
+import { toError } from "../shared/errors/errorUtils.js";
 
 const router = express.Router();
 const uploadReceiptFiles = createImagesUploadMiddleware({

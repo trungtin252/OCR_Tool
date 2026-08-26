@@ -1,7 +1,7 @@
 import { zodTextFormat } from "openai/helpers/zod";
 import type { SchemaType } from "@backend/validation/types";
-import { formatDatesInResponse } from "../../utils/dateProcessor";
-import { client } from "../../utils/llmModel";
+import { formatDatesInResponse } from "@backend/shared/postprocessing/dateProcessor";
+import { client } from "@backend/shared/llm/llmModel";
 import {
   FALLBACK_MODEL,
   getModelForSchemaType,
@@ -13,7 +13,7 @@ import {
   buildChatImageInputs,
   buildResponsesImageInputs,
   createStructuredChatCompletion,
-} from "./llmGateway";
+} from "@backend/shared/llm/llmGateway";
 
 // deprecated
 export const processImagesWithOpenAI = async (

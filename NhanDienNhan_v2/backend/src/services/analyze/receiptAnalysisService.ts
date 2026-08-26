@@ -4,8 +4,8 @@ import { receipt_prompt } from "@backend/utils/prompts/receiptPrompt";
 import {
   getCanonicalImageMime,
   hasExpectedFileSignature,
-} from "@backend/utils/uploadValidation";
-import { MAX_UPLOAD_FILE_SIZE_BYTES } from "@backend/middleware/upload.middleware";
+} from "@backend/shared/upload/uploadValidation";
+import { MAX_UPLOAD_FILE_SIZE_BYTES } from "@backend/shared/upload/limits";
 import { processImagesWithOpenAI_chatCompletions } from "./imageProcessor";
 
 export const MAX_RESOLVED_RECEIPT_IMAGES = 10;

@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import imageRoutes from "./routes/imageRoutes";
 import receiptRoutes from "./routes/receiptRoutes";
-import { errorHandler } from "./middleware/error.middleware";
+import { errorHandler } from "./shared/errors/error.middleware";
 import { appConfig } from "./config/env";
 
 const app = express();

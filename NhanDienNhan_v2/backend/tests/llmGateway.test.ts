@@ -4,7 +4,7 @@ import {
   buildChatImageInputs,
   buildResponsesImageInputs,
   isFallbackEligibleError,
-} from "../src/services/analyze/llmGateway.js";
+} from "../src/shared/llm/llmGateway.js";
 
 test("LLM gateway produces the same image data URLs for both SDK APIs", () => {
   const images = [Buffer.from("image-one"), Buffer.from("image-two")];

@@ -1,6 +1,6 @@
 import { zodResponseFormat } from "openai/helpers/zod";
 import type { z } from "zod";
-import { client } from "@backend/utils/llmModel";
+import { client } from "@backend/shared/llm/llmModel";
 
 const MIME_DATA_URL_PREFIXES: Record<string, string> = {
   "image/jpeg": "data:image/jpeg;base64,",

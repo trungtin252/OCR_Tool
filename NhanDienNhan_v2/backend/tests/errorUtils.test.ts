@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { NextFunction, Request, Response } from "express";
-import AppError from "../src/utils/AppError.js";
+import AppError from "../src/shared/errors/AppError.js";
 import {
   getErrorMessage,
   getErrorStatusCode,
   toError,
-} from "../src/utils/errorUtils.js";
-import { errorHandler } from "../src/middleware/error.middleware.js";
+} from "../src/shared/errors/errorUtils.js";
+import { errorHandler } from "../src/shared/errors/error.middleware.js";
 
 test("error helpers preserve legacy message and status fallback behavior", () => {
   assert.equal(

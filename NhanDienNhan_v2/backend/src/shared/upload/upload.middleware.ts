@@ -1,9 +1,12 @@
 import type { RequestHandler } from "express";
 import multer from "multer";
-import { isSupportedUploadMime } from "@backend/utils/uploadValidation";
+import { isSupportedUploadMime } from "@backend/shared/upload/uploadValidation";
+import {
+  MAX_UPLOAD_FILE_SIZE_BYTES,
+  MAX_UPLOAD_FILES,
+} from "@backend/shared/upload/limits";
 
-export const MAX_UPLOAD_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-export const MAX_UPLOAD_FILES = 10;
+export { MAX_UPLOAD_FILE_SIZE_BYTES, MAX_UPLOAD_FILES } from "@backend/shared/upload/limits";
 
 interface UploadMiddlewareOptions {
   allowPdf: boolean;
