@@ -60,28 +60,34 @@ export function parseFertilizerPage(
   let usageMethod: string | undefined;
 
   // The general info table is the first `.table` inside the description tab
-  $(".tab-pane#description .col-md-6").first().find("table tbody tr").each((_, row) => {
-    const cells = $(row).find("td");
-    const label = cells.eq(0).text().trim();
-    const value = cells.eq(1).text().trim();
-    if (label.includes("Loại phân bón")) {
-      fertilizerType = value || undefined;
-    } else if (label.includes("Phương thức sử dụng")) {
-      usageMethod = value || undefined;
-    }
-  });
+  $(".tab-pane#description .col-md-6")
+    .first()
+    .find("table tbody tr")
+    .each((_, row) => {
+      const cells = $(row).find("td");
+      const label = cells.eq(0).text().trim();
+      const value = cells.eq(1).text().trim();
+      if (label.includes("Loại phân bón")) {
+        fertilizerType = value || undefined;
+      } else if (label.includes("Phương thức sử dụng")) {
+        usageMethod = value || undefined;
+      }
+    });
 
   // ── Ingredients table (Thành phần, hàm lượng dinh dưỡng)
   const ingredients: Ingredient[] = [];
-  $(".tab-pane#description .col-md-6").last().find("table tbody tr").each((_, row) => {
-    const cells = $(row).find("td");
-    if (cells.length < 3) return;
-    const name = cells.eq(1).text().trim();
-    const content = cells.eq(2).text().trim();
-    if (name) {
-      ingredients.push({ name, content });
-    }
-  });
+  $(".tab-pane#description .col-md-6")
+    .last()
+    .find("table tbody tr")
+    .each((_, row) => {
+      const cells = $(row).find("td");
+      if (cells.length < 3) return;
+      const name = cells.eq(1).text().trim();
+      const content = cells.eq(2).text().trim();
+      if (name) {
+        ingredients.push({ name, content });
+      }
+    });
 
   // ── Usage guide (Hướng dẫn sử dụng)
   // The usage guide is the first col-md-6 in the second main row
@@ -97,8 +103,9 @@ export function parseFertilizerPage(
   // ── Registrant
   let registrant: string | undefined;
   $("h3.panel-title")
-    .filter((_, el) =>
-      $(el).text().includes("Tổ chức") || $(el).text().includes("đăng ký"),
+    .filter(
+      (_, el) =>
+        $(el).text().includes("Tổ chức") || $(el).text().includes("đăng ký"),
     )
     .closest(".col-md-6")
     .find("table tbody tr")
@@ -118,16 +125,14 @@ export function parseFertilizerPage(
     ...(registration_number ? { registration_number } : {}),
     ...(registrant ? { registrant } : {}),
     ...(ingredients.length > 0 ? { ingredients } : {}),
-    ...(dosage ?? notes ? { dosage: dosage ?? notes } : {}),
+    ...((dosage ?? notes) ? { dosage: dosage ?? notes } : {}),
     source_url: sourceUrl,
   };
 }
 
 // ─── Provider implementation ─────────────────────────────────
 
-export class FertilizerProvider
-  implements SearchProvider<FertilizerSearchResult>
-{
+export class FertilizerProvider implements SearchProvider<FertilizerSearchResult> {
   /**
    * Search strategy (per FEATURE.md):
    * 1. Search by registration_number (product code) first if available

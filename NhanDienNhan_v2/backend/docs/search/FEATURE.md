@@ -31,16 +31,16 @@ POST /api/...
 
 Behavior:
 
-* `search=false` or omitted:
+- `search=false` or omitted:
 
-  * Keep existing behavior unchanged.
+  - Keep existing behavior unchanged.
 
-* `search=true`:
+- `search=true`:
 
-  * Run the normal Vision LLM extraction workflow.
-  * Perform online product lookup.
-  * Merge image-extracted information with official database information.
-  * Return enriched product data.
+  - Run the normal Vision LLM extraction workflow.
+  - Perform online product lookup.
+  - Merge image-extracted information with official database information.
+  - Return enriched product data.
 
 ---
 
@@ -102,8 +102,8 @@ http://113.190.254.147/PhanBon/en/phanbonchungnhan?MaPhanBon=<product_code>
 
 Unlike the pesticide website:
 
-* Search result directly returns the product detail page.
-* No additional detail-page navigation is required.
+- Search result directly returns the product detail page.
+- No additional detail-page navigation is required.
 
 The HTML sample response will be provided in the HTML sample folder.
 
@@ -196,7 +196,6 @@ Create normalized internal models.
 Example:
 
 ```ts
-
 interface ingredient {
   name: string;
   content: string;
@@ -207,7 +206,7 @@ interface dosage {
   target_crop: string;
   amount: string;
   pre_harvest_interval: string;
-  usage_instructions: string;  // cách dùng
+  usage_instructions: string; // cách dùng
 }
 
 interface PesticideSearchResult {
@@ -257,12 +256,12 @@ Input:
 
 Responsibilities of the fusion LLM:
 
-* ensure searched product is matched with the image-extracted product.
-* Resolve conflicts.
-* Fill missing fields from official database results.
-* Preserve confidence from image extraction.
-* Generate a unified final structured response.
-* Prefer official database information when conflicts exist.
+- ensure searched product is matched with the image-extracted product.
+- Resolve conflicts.
+- Fill missing fields from official database results.
+- Preserve confidence from image extraction.
+- Generate a unified final structured response.
+- Prefer official database information when conflicts exist.
 
 ---
 
@@ -311,10 +310,10 @@ Search failures must never fail the entire request.
 
 Examples:
 
-* Website unavailable
-* Timeout
-* Product not found
-* HTML structure changed
+- Website unavailable
+- Timeout
+- Product not found
+- HTML structure changed
 
 Expected behavior:
 
@@ -358,9 +357,9 @@ Government databases may not be designed for high traffic.
 
 Implement:
 
-* Request timeout
-* Retry with backoff
-* Concurrency limits
+- Request timeout
+- Retry with backoff
+- Concurrency limits
 
 to avoid overwhelming external services.
 
@@ -381,6 +380,7 @@ Implement:
 The existing extraction workflow must remain fully backward compatible.
 
 ### Notes
+
     * Should not search when there is no valid product name or registration number extracted from the image.
     * If both product name and registration number are available, search by registration number first as it is more specific.
     * Incase pesticide product is searched by name and returns multiple results, attempt to match with the image-extracted information (e.g. best-match selection (exact match > normalized match > fuzzy match)) to find the correct product detail page.
