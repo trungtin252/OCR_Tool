@@ -1,13 +1,13 @@
 import type {
   ProductSchemaType,
   SearchMode,
-} from "@backend/utils/requestValidation";
-import { buildPrompt } from "@backend/utils/prompts/productPrompts";
+} from "@backend/modules/product/product.requestValidation";
 import { enrichWithSearch } from "@backend/services/search";
 import type { SearchMetadata } from "@backend/services/search";
-import { processImagesWithOpenAI_chatCompletions } from "./imageProcessor";
+import { processImagesWithOpenAI_chatCompletions } from "@backend/services/analyze/imageProcessor";
+import { getProductDefinition } from "./product.registry";
 
-interface ProductAnalysisOptions {
+export interface ProductAnalysisOptions {
   imageBuffers: Buffer[];
   imageTypes: string[];
   schemaType: ProductSchemaType;
@@ -39,7 +39,7 @@ export interface ProductAnalysisResult {
 function isSearchableCategory(
   schemaType: ProductSchemaType,
 ): schemaType is "pesticide" | "fertilizer" {
-  return schemaType === "pesticide" || schemaType === "fertilizer";
+  return getProductDefinition(schemaType).supportsSearch;
 }
 
 function toExtractionObject(responseData: unknown): object {
@@ -103,10 +103,8 @@ export function evaluateProductSearchGate({
 export async function analyzeProduct(
   options: ProductAnalysisOptions,
 ): Promise<ProductAnalysisResult> {
-  const prompt = buildPrompt(
-    options.schemaType,
-    options.searchMode === "interactive",
-  );
+  const definition = getProductDefinition(options.schemaType);
+  const prompt = definition.buildPrompt(options.searchMode === "interactive");
   const result = await processImagesWithOpenAI_chatCompletions(
     options.imageBuffers,
     options.imageTypes,

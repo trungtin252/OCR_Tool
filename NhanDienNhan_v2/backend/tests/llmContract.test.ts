@@ -11,7 +11,7 @@ import {
   pesticide_prompt,
   seed_prompt,
   test_prompt,
-} from "../src/utils/prompts/productPrompts.js";
+} from "../src/modules/product/product.prompts.js";
 import { receipt_prompt } from "../src/utils/prompts/receiptPrompt.js";
 import {
   FertilizerResponseSchema,
@@ -20,7 +20,7 @@ import {
   PesticideResponseSchemaWithSearch,
   FertilizerResponseSchemaWithSearch,
   SeedResponseSchema,
-} from "../src/validation/productInfo.js";
+} from "../src/modules/product/product.schema.js";
 import { DocumentResponseSchema } from "../src/validation/receiptInfo.js";
 
 function sha256(value: string): string {

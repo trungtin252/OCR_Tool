@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
-import imageRoutes from "./routes/imageRoutes";
+import imageRoutes from "./modules/product/product.routes";
 import receiptRoutes from "./routes/receiptRoutes";
+import imageDiagnosticsRoutes from "./diagnostics/imageDiagnostics.routes";
 import { errorHandler } from "./shared/errors/error.middleware";
 import { appConfig } from "./config/env";
 
@@ -24,12 +25,13 @@ app.use(express.urlencoded({ extended: true }));
 
 // Image processing routes
 app.use("/api/image", imageRoutes);
+app.use("/api/image", imageDiagnosticsRoutes);
 app.use("/api/receipt", receiptRoutes);
 app.get("/", (req, res) => {
   res.send("Welcome to the Image Analysis API\n");
 });
 
-import { testCallOpenAI } from "@backend/services/analyze/imageProcessor";
+import { testCallOpenAI } from "@backend/diagnostics/openaiDiagnostics";
 if (testEndpointsEnabled) {
   app.post("/test-openai", async (req, res) => {
     await testCallOpenAI();

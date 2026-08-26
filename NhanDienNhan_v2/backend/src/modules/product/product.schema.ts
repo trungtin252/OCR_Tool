@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { BaseResponseSchema, BaseResponseSchemaWithSearch } from "./baseSchema";
+import {
+  BaseResponseSchema,
+  BaseResponseSchemaWithSearch,
+} from "@backend/validation/baseSchema";
 
 const unitMap = {
   gram: "Gram",

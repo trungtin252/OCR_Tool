@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { evaluateProductSearchGate } from "../src/services/analyze/productAnalysisService.js";
+import { evaluateProductSearchGate } from "../src/modules/product/product.service.js";
 
 const completeInteractiveResponse = {
   search_decision: {

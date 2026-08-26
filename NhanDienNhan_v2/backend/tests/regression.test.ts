@@ -5,7 +5,7 @@ import {
   parseBooleanQuery,
   parseProductSchemaType,
   parseSearchMode,
-} from "../src/utils/requestValidation.js";
+} from "../src/modules/product/product.requestValidation.js";
 import {
   getCanonicalImageMime,
   hasExpectedFileSignature,
@@ -17,7 +17,7 @@ import {
 } from "../src/shared/postprocessing/dateUtils.js";
 import { formatDatesInResponse } from "../src/shared/postprocessing/dateProcessor.js";
 import { reconcileDocumentMath } from "../src/utils/documentReconciler.js";
-import { PesticideDataSchema } from "../src/validation/productInfo.js";
+import { PesticideDataSchema } from "../src/modules/product/product.schema.js";
 
 test("product category parsing keeps the documented default", () => {
   assert.equal(parseProductSchemaType(undefined), "pesticide");
