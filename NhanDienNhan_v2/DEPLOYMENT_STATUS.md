@@ -21,14 +21,14 @@ Người dùng
 
 ## 2. Thành phần và trạng thái
 
-| Thành phần | Vị trí / image | Cách truy cập | Ghi chú |
-| --- | --- | --- | --- |
-| OCR backend | `NhanDienNhan_v2/backend`, `nhan-dien-nhan-backend:local` | Host port `5000`; health: `http://127.0.0.1:5000/health` | Không dùng Docker Hub. |
-| OCR frontend | `NhanDienNhan_v2/frontend`, `nhan-dien-nhan-frontend:local` | `127.0.0.1:3002` trên host; public qua `https://ocrfe.o2n.ai.vn` | Port chỉ bind loopback, không public trực tiếp. |
-| Cloudflare connector | `cloudflared` systemd service | `systemctl is-active cloudflared` | Đã xác nhận `active`; Tunnel publish hostname FE. |
-| OCR archive | Host: `/srv/ocr-data` | Container backend: `/app/data/ocr-history` | Bind mount, không nằm trong image hay Git. |
-| AIChatAgent web | Container `o2n-web` | Host port `80` | Không bị sửa hoặc dùng để route frontend OCR. |
-| AIChatAgent backend, n8n | Các container hiện có trên server | Theo stack riêng | Không bị thay đổi bởi hệ OCR. |
+| Thành phần               | Vị trí / image                                              | Cách truy cập                                                    | Ghi chú                                           |
+| ------------------------ | ----------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------- |
+| OCR backend              | `NhanDienNhan_v2/backend`, `nhan-dien-nhan-backend:local`   | Host port `5000`; health: `http://127.0.0.1:5000/health`         | Không dùng Docker Hub.                            |
+| OCR frontend             | `NhanDienNhan_v2/frontend`, `nhan-dien-nhan-frontend:local` | `127.0.0.1:3002` trên host; public qua `https://ocrfe.o2n.ai.vn` | Port chỉ bind loopback, không public trực tiếp.   |
+| Cloudflare connector     | `cloudflared` systemd service                               | `systemctl is-active cloudflared`                                | Đã xác nhận `active`; Tunnel publish hostname FE. |
+| OCR archive              | Host: `/srv/ocr-data`                                       | Container backend: `/app/data/ocr-history`                       | Bind mount, không nằm trong image hay Git.        |
+| AIChatAgent web          | Container `o2n-web`                                         | Host port `80`                                                   | Không bị sửa hoặc dùng để route frontend OCR.     |
+| AIChatAgent backend, n8n | Các container hiện có trên server                           | Theo stack riêng                                                 | Không bị thay đổi bởi hệ OCR.                     |
 
 ## 3. Archive OCR
 
@@ -107,11 +107,11 @@ systemctl is-active cloudflared
 
 Published application route cần có:
 
-| Thuộc tính | Giá trị |
-| --- | --- |
-| Hostname | `ocrfe.o2n.ai.vn` |
-| Service URL | `http://127.0.0.1:3002` |
-| Tunnel | Tunnel hiện có, trạng thái `Healthy` |
+| Thuộc tính  | Giá trị                              |
+| ----------- | ------------------------------------ |
+| Hostname    | `ocrfe.o2n.ai.vn`                    |
+| Service URL | `http://127.0.0.1:3002`              |
+| Tunnel      | Tunnel hiện có, trạng thái `Healthy` |
 
 Với remotely managed Tunnel, cấu hình ở Cloudflare Dashboard:
 **Networking > Tunnels > [Tunnel] > Routes > Add route > Published
