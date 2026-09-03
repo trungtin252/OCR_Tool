@@ -659,6 +659,19 @@ Search và fusion được cô lập trong orchestrator. Lỗi ở nhánh này k
   `X-OCR-Archive-Status` có giá trị `saved`, `failed` hoặc `disabled`.
 - Khi khởi động, `.pending` cũ quá một giờ được chuyển sang `incomplete/`, không
   tự xóa. Trong Docker phải bind mount `/app/data/ocr-history` ra host.
+- Admin panel đọc archive qua `/api/admin/ocr-history`: list có phân trang/lọc,
+  detail trả metadata + JSON normalized/raw và file chỉ được stream theo ID + index
+  đã kiểm tra. Không API nào nhận đường dẫn filesystem từ client.
+- Admin có thể xét duyệt từng kết quả qua `PUT /api/admin/ocr-history/:id/review`.
+  Manifest lưu `user_confirmed`, `user_correction` và `reviewed_at`; trạng thái
+  `Không đạt` bắt buộc có nhận xét về lỗi cần chỉnh sửa.
+- Xóa trong admin là xóa mềm: backend rename nguyên thư mục interaction vào
+  `OCR_ARCHIVE_DIR/.trash/`. `.trash` không được liệt kê hay tự dọn; cần phục hồi
+  thủ công trên host nếu cần giữ lại interaction.
+- Các API admin hiện không có backend auth vì màn hình `/admin` chỉ kiểm tra tài
+  khoản gán cứng ở frontend. Chúng không phù hợp để public Internet nếu archive
+  chứa dữ liệu nhạy cảm; cần đặt lớp bảo vệ hạ tầng hoặc bổ sung auth backend trước
+  khi mở rộng phạm vi truy cập.
 - Search cache dùng singleton `Map`, không persist qua restart và không chia sẻ giữa nhiều instance; giữ tối đa 200 kết quả, sau đó loại mục được thêm sớm nhất.
 - LLM và hai website tra cứu là các phụ thuộc runtime bên ngoài.
 

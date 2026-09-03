@@ -8,6 +8,8 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_BACKEND_URL: ${VITE_BACKEND_URL:-https://ocr.o2n.ai.vn}
+        VITE_ADMIN_USERNAME: ${VITE_ADMIN_USERNAME:?Set VITE_ADMIN_USERNAME in .env.docker}
+        VITE_ADMIN_PASSWORD: ${VITE_ADMIN_PASSWORD:?Set VITE_ADMIN_PASSWORD in .env.docker}
     ports:
       - "127.0.0.1:${OCR_TUNNEL_ORIGIN_PORT:-3002}:80"
     restart: unless-stopped

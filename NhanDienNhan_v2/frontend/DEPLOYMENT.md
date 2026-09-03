@@ -23,8 +23,15 @@ Keep these production values unless the backend or a local port has moved:
 
 ```text
 VITE_BACKEND_URL=https://ocr.o2n.ai.vn
+VITE_ADMIN_USERNAME=admin
+VITE_ADMIN_PASSWORD=use-a-distinct-strong-password-here
 OCR_TUNNEL_ORIGIN_PORT=3002
 ```
+
+`VITE_ADMIN_USERNAME` and `VITE_ADMIN_PASSWORD` are required when the image is
+built. Keep their real values only in `.env.docker`, which must not be
+committed. This frontend-only check is visible in the browser bundle and is
+only an internal UI gate; it does not replace backend authentication.
 
 Check that the selected loopback port is not occupied, then build and start:
 

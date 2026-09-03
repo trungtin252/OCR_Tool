@@ -3,6 +3,7 @@ import cors from "cors";
 import imageRoutes from "./modules/product/product.routes";
 import receiptRoutes from "./modules/receipt/receipt.routes";
 import gaCertificateRoutes from "./modules/ga_certificate/gaCertificate.routes";
+import adminRoutes from "./modules/admin/admin.routes";
 import imageDiagnosticsRoutes from "./diagnostics/imageDiagnostics.routes";
 import { errorHandler } from "./shared/errors/error.middleware";
 import { appConfig } from "./config/env";
@@ -30,6 +31,7 @@ app.use("/api/image", imageRoutes);
 app.use("/api/image", imageDiagnosticsRoutes);
 app.use("/api/receipt", receiptRoutes);
 app.use("/api/ga_certificate", gaCertificateRoutes);
+app.use("/api/admin", adminRoutes);
 app.get("/", (req, res) => {
   res.send("Welcome to the Image Analysis API\n");
 });

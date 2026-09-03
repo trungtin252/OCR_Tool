@@ -43,6 +43,7 @@ file `interaction.json`, `ai-output.json`, `normalized.json`.
     ai-output.json
     normalized.json
     files/
+  .trash/<deleted-timestamp>_<uuid>_<interaction>/
 ```
 
 Biến runtime backend:
@@ -54,10 +55,27 @@ OCR_ARCHIVE_MIN_FREE_BYTES=1073741824
 ```
 
 Khi archive không thể ghi hoặc dung lượng dưới ngưỡng, OCR vẫn trả response
-bình thường; backend log `ARCHIVE_WRITE_FAILED`. Không expose `/srv/ocr-data`
-qua Express, Nginx hay Cloudflare.
+bình thường; backend log `ARCHIVE_WRITE_FAILED`.
 
-## 4. Deploy backend
+## 4. Admin lịch sử OCR
+
+Frontend có trang `/admin`, đăng nhập bằng giá trị `VITE_ADMIN_USERNAME` /
+`VITE_ADMIN_PASSWORD` được đặt tại lúc build và chỉ lưu trạng thái ở
+`sessionStorage` của tab hiện tại. Trang gọi các API `/api/admin/ocr-history`
+để list/detail, preview hoặc tải file archive; xóa sẽ rename interaction vào
+`/srv/ocr-data/.trash` để có thể phục hồi thủ công.
+
+Admin cũng có thể xét duyệt `Đạt` hoặc `Không đạt` cho từng interaction. Thao tác
+này cập nhật `user_confirmed`, `user_correction`, `reviewed_at` trong
+`interaction.json`; trạng thái Không đạt yêu cầu có nhận xét.
+
+Không expose trực tiếp đường dẫn archive: API chỉ phục vụ các interaction và file
+đã tìm thấy trong `OCR_ARCHIVE_DIR`. Tuy nhiên xác thực hiện chỉ ở frontend, nên API
+admin không có bảo vệ trước request trực tiếp. Không public backend/Cloudflare route
+này khi dữ liệu nhạy cảm; cần bảo vệ bằng Cloudflare Access/reverse proxy hoặc thay
+bằng xác thực backend trước khi public.
+
+## 5. Deploy backend
 
 ```bash
 cd ~/OCR/nhan-dien-nhan/NhanDienNhan_v2
@@ -74,7 +92,7 @@ Backend dùng `.env` tại `backend/.env`. Không commit file này. Khi
 trình duyệt frontend gọi API được. Nếu để trống, backend giữ hành vi CORS
 allow-all hiện tại.
 
-## 5. Deploy frontend
+## 6. Deploy frontend
 
 ```bash
 cd ~/OCR/nhan-dien-nhan/NhanDienNhan_v2
@@ -91,13 +109,20 @@ curl http://127.0.0.1:3002/health
 
 ```env
 VITE_BACKEND_URL=https://ocr.o2n.ai.vn
+VITE_ADMIN_USERNAME=admin
+VITE_ADMIN_PASSWORD=<mat-khau-quan-tri-rieng>
 OCR_TUNNEL_ORIGIN_PORT=3002
 ```
+
+`VITE_ADMIN_USERNAME` và `VITE_ADMIN_PASSWORD` phải được đặt trong
+`frontend/.env.docker` trước khi build. File này không commit. Xác thực này chỉ
+chặn giao diện vì giá trị Vite có trong bundle trình duyệt; API backend vẫn cần
+xác thực thật khi dùng cho môi trường có yêu cầu bảo mật.
 
 Nếu port `3002` đã được dùng, chọn một port loopback trống trong
 `OCR_TUNNEL_ORIGIN_PORT`, rồi sửa cùng port đó ở service URL của Tunnel.
 
-## 6. Cloudflare Tunnel
+## 7. Cloudflare Tunnel
 
 `cloudflared` chạy bằng systemd trên host và phải tiếp tục ở trạng thái active:
 
@@ -120,7 +145,7 @@ application**.
 Không cần mở firewall inbound cho port 3002, thêm Nginx virtual-host, hoặc dùng
 port suffix trên URL. Không đưa token Tunnel vào Git hay gửi qua chat.
 
-## 7. Kiểm tra nhanh và xử lý sự cố
+## 8. Kiểm tra nhanh và xử lý sự cố
 
 ```bash
 # Backend
