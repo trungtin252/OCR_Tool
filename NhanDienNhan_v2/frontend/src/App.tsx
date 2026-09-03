@@ -6,6 +6,8 @@ import { FertilizerResults } from "./components/FertilizerResults";
 import { SeedResults } from "./components/SeedResults";
 import { ReceiptUpload } from "./components/ReceiptUpload";
 import { ReceiptResults } from "./components/ReceiptResults";
+import { GaCertificateUpload } from "./components/GaCertificateUpload";
+import { GaCertificateResults } from "./components/GaCertificateResults";
 import type {
   ProductInfo,
   ProductCategory,
@@ -19,12 +21,16 @@ import {
 } from "./apis/imageApi";
 import { uploadFilesForReceiptAnalysis } from "./apis/receiptApi";
 import type { ReceiptApiResponse } from "./apis/receiptApi";
+import {
+  uploadFilesForGrowingAreaCertificateAnalysis,
+  type GrowingAreaCertificateApiResponse,
+} from "./apis/gaCertificateApi";
 import { Switch } from "./components/ui/switch";
 import "./App.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type AppMode = "product" | "receipt";
+type AppMode = "product" | "receipt" | "growing_area_certificate";
 type ViewState = "upload" | "loading" | "results";
 
 const isSearchableCategory = (cat: ProductCategory) =>
@@ -52,6 +58,15 @@ function App() {
   const [receiptFiles, setReceiptFiles] = useState<File[]>([]);
   const [receiptData, setReceiptData] = useState<ReceiptApiResponse | null>(null);
   const [receiptError, setReceiptError] = useState<string>("");
+
+  const [growingAreaCertificateViewState, setGrowingAreaCertificateViewState] =
+    useState<ViewState>("upload");
+  const [growingAreaCertificateFiles, setGrowingAreaCertificateFiles] =
+    useState<File[]>([]);
+  const [growingAreaCertificateData, setGrowingAreaCertificateData] =
+    useState<GrowingAreaCertificateApiResponse | null>(null);
+  const [growingAreaCertificateError, setGrowingAreaCertificateError] =
+    useState<string>("");
 
   // ─── Mode switch ─────────────────────────────────────────────────────────────
 
@@ -159,6 +174,48 @@ function App() {
     setReceiptViewState("upload");
   };
 
+  const handleGrowingAreaCertificateFilesSelected = (files: File[]) => {
+    setGrowingAreaCertificateFiles(files);
+    setGrowingAreaCertificateError("");
+  };
+
+  const handleGrowingAreaCertificateSubmit = async () => {
+    if (growingAreaCertificateFiles.length === 0) {
+      setGrowingAreaCertificateError("Vui lòng chọn ít nhất một file");
+      return;
+    }
+
+    setGrowingAreaCertificateViewState("loading");
+    setGrowingAreaCertificateError("");
+    try {
+      const response = await uploadFilesForGrowingAreaCertificateAnalysis(
+        growingAreaCertificateFiles,
+      );
+      if (!response.success || !response.data) {
+        setGrowingAreaCertificateError(
+          response.message || response.error || "Lỗi khi xử lý chứng nhận",
+        );
+        setGrowingAreaCertificateViewState("upload");
+        return;
+      }
+
+      setGrowingAreaCertificateData(response);
+      setGrowingAreaCertificateViewState("results");
+    } catch {
+      setGrowingAreaCertificateError(
+        "Lỗi khi xử lý chứng nhận. Vui lòng thử lại.",
+      );
+      setGrowingAreaCertificateViewState("upload");
+    }
+  };
+
+  const handleGrowingAreaCertificateReset = () => {
+    setGrowingAreaCertificateFiles([]);
+    setGrowingAreaCertificateData(null);
+    setGrowingAreaCertificateError("");
+    setGrowingAreaCertificateViewState("upload");
+  };
+
   // ─── Styling helpers ──────────────────────────────────────────────────────────
 
   const getButtonGradient = () => {
@@ -203,6 +260,16 @@ function App() {
             }`}
           >
             🧾 Đọc phiếu nhập hàng
+          </button>
+          <button
+            onClick={() => handleModeSwitch("growing_area_certificate")}
+            className={`flex-1 py-3 text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+              appMode === "growing_area_certificate"
+                ? "bg-teal-600 text-white shadow-inner"
+                : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            Chứng nhận vùng trồng
           </button>
         </div>
 
@@ -325,6 +392,46 @@ function App() {
                   onReset={handleReceiptReset}
                 />
               )}
+            </div>
+          </>
+        )}
+
+        {appMode === "growing_area_certificate" && (
+          <>
+            {growingAreaCertificateError && (
+              <div className="mb-6 bg-red-100 border-l-4 border-red-500 p-4 rounded text-red-700 text-center">
+                {growingAreaCertificateError}
+              </div>
+            )}
+            <div className="bg-white rounded-xl shadow-xl p-8">
+              {growingAreaCertificateViewState === "upload" && (
+                <>
+                  <GaCertificateUpload
+                    onFilesSelected={handleGrowingAreaCertificateFilesSelected}
+                    isLoading={false}
+                  />
+                  <button
+                    onClick={handleGrowingAreaCertificateSubmit}
+                    disabled={growingAreaCertificateFiles.length === 0}
+                    className="w-full mt-8 py-3 bg-linear-to-r from-teal-600 to-cyan-700 text-white font-semibold rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    Phân tích chứng nhận vùng trồng
+                  </button>
+                </>
+              )}
+
+              {growingAreaCertificateViewState === "loading" && (
+                <LoadingIndicator />
+              )}
+
+              {growingAreaCertificateViewState === "results" &&
+                growingAreaCertificateData && (
+                  <GaCertificateResults
+                    response={growingAreaCertificateData}
+                    files={growingAreaCertificateFiles}
+                    onReset={handleGrowingAreaCertificateReset}
+                  />
+                )}
             </div>
           </>
         )}

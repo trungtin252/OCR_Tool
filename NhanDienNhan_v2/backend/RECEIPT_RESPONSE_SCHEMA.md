@@ -79,7 +79,7 @@ Thông tin độ tin cậy và danh sách các cảnh báo (Để `null` nếu �
 - **metadata.overall_confidence** (number): Điểm số độ tin cậy tổng thể của quá trình OCR (giá trị từ `0` đến `1`).
 - **metadata.review_warnings** (array): Danh sách các trường nghi ngờ hoặc lỗi logic cần con người kiểm tra lại. Mỗi phần tử bao gồm:
   - `field` (string | null): Đường dẫn của trường bị nghi ngờ (Ví dụ: `documents.0.items.1.unit_price`). Sẽ là `null` nếu là lỗi toàn cục (Ví dụ: ảnh bị ngược).
-  - `issue` (string enum): Phân loại lỗi, ví dụ:
+  - `issue` (string): Phân loại lỗi. Schema không giới hạn enum; ví dụ:
     - `TEXT_BLURRY`: Chữ bị mờ.
     - `TEXT_OVERLAPPED`: Chữ ký, dấu mộc đỏ hoặc vết bẩn đè lên văn bản.
     - `MATH_MISMATCH`: Sai lệch số học tự động đối chiếu bằng code logic (Ví dụ: Số lượng \* Đơn giá khác Thành tiền, tổng thành tiền các dòng không khớp với Tổng thanh toán, hoặc tổng số bao/khối lượng không khớp với tổng kết toàn phiếu).
@@ -121,15 +121,15 @@ Mỗi chứng từ trong danh sách `documents` sẽ thuộc một trong hai đ�
 
 ##### Chi tiết cấu trúc dòng vật tư của Phiếu xuất/giao hàng (`delivery_note`)
 
-| Tên trường     | Kiểu dữ liệu   | Mô tả                                                                |
-| :------------- | :------------- | :------------------------------------------------------------------- |
-| `product_name` | string \| null | Tên vật tư/sản phẩm (VD: `'CON CÒ C5001 - Thức ăn cá'`)              |
-| `product_code` | string \| null | Mã sản phẩm nếu có (VD: `'91C5001-00/0.5-PE10'`)                     |
-| `lot_number`   | string \| null | Số lô sản xuất / Ngày phối trộn sản phẩm (VD: `'06032026-D5017001'`) |
-| `net_content`  | number \| null | Khối lượng tịnh của 1 bao (VD: `10`, `25`)                           |
-| `net_unit`     | string \| null | Đơn vị tính khối lượng tịnh (VD: `'kg'`, `'g'`)                      |
-| `bag_count`    | number \| null | Số lượng bao của dòng đó (VD: `100`)                                 |
-| `total_weight` | number \| null | Tổng số kg của dòng đó (bằng Số bao \* Khối lượng tịnh, VD: `1000`)  |
+| Tên trường     | Kiểu dữ liệu   | Mô tả                                                                                                                                     |
+| :------------- | :------------- | :---------------------------------------------------------------------------------------------------------------------------------------- |
+| `product_name` | string \| null | Tên vật tư/sản phẩm (VD: `'CON CÒ C5001 - Thức ăn cá'`)                                                                                   |
+| `product_code` | string \| null | Mã sản phẩm nếu có (VD: `'91C5001-00/0.5-PE10'`)                                                                                          |
+| `lot_number`   | string \| null | Số lô sản xuất / Ngày phối trộn sản phẩm (VD: `'06032026-D5017001'`)                                                                      |
+| `net_content`  | number \| null | Khối lượng tịnh của 1 bao (VD: `10`, `25`)                                                                                                |
+| `net_unit`     | string \| null | Đơn vị tính khối lượng tịnh (VD: `'kg'`, `'g'`)                                                                                           |
+| `bag_count`    | number \| null | Số lượng bao của dòng đó (VD: `100`)                                                                                                      |
+| `total_weight` | number \| null | Tổng trọng lượng ghi trên dòng (thường là Số bao \* Khối lượng tịnh). Service sẽ thêm warning `MATH_MISMATCH` nếu các số liệu không khớp. |
 
 ---
 

@@ -3,6 +3,8 @@ import test from "node:test";
 import {
   createAppConfig,
   DEFAULT_LLM_TIMEOUT_MS,
+  DEFAULT_OCR_ARCHIVE_DIR,
+  DEFAULT_OCR_ARCHIVE_MIN_FREE_BYTES,
   DEFAULT_PORT,
   DEFAULT_SEARCH_CACHE_MAX_ENTRIES,
   DEFAULT_SEARCH_CACHE_TTL_MS,
@@ -25,6 +27,9 @@ test("environment defaults preserve the existing runtime behavior", () => {
     searchHttpTimeoutMs: DEFAULT_SEARCH_HTTP_TIMEOUT_MS,
     searchHttpMaxRetries: DEFAULT_SEARCH_HTTP_MAX_RETRIES,
     searchHttpConcurrency: DEFAULT_SEARCH_HTTP_CONCURRENCY,
+    ocrArchiveEnabled: true,
+    ocrArchiveDir: DEFAULT_OCR_ARCHIVE_DIR,
+    ocrArchiveMinFreeBytes: DEFAULT_OCR_ARCHIVE_MIN_FREE_BYTES,
   });
 });
 
@@ -40,6 +45,9 @@ test("environment configuration parses valid values without changing semantics",
     SEARCH_HTTP_TIMEOUT_MS: "12000",
     SEARCH_HTTP_MAX_RETRIES: "0",
     SEARCH_HTTP_CONCURRENCY: "3",
+    OCR_ARCHIVE_ENABLED: "true",
+    OCR_ARCHIVE_DIR: "/app/data/ocr-history",
+    OCR_ARCHIVE_MIN_FREE_BYTES: "2048",
   });
 
   assert.deepEqual(config, {
@@ -53,6 +61,9 @@ test("environment configuration parses valid values without changing semantics",
     searchHttpTimeoutMs: 12000,
     searchHttpMaxRetries: 0,
     searchHttpConcurrency: 3,
+    ocrArchiveEnabled: true,
+    ocrArchiveDir: "/app/data/ocr-history",
+    ocrArchiveMinFreeBytes: 2048,
   });
 });
 
@@ -66,6 +77,9 @@ test("invalid numeric configuration falls back to safe legacy defaults", () => {
     SEARCH_HTTP_MAX_RETRIES: "-1",
     SEARCH_HTTP_CONCURRENCY: "11",
     ENABLE_TEST_ENDPOINTS: "FALSE",
+    OCR_ARCHIVE_ENABLED: "false",
+    OCR_ARCHIVE_DIR: "   ",
+    OCR_ARCHIVE_MIN_FREE_BYTES: "-1",
   });
 
   assert.equal(config.port, DEFAULT_PORT);
@@ -76,4 +90,10 @@ test("invalid numeric configuration falls back to safe legacy defaults", () => {
   assert.equal(config.searchHttpMaxRetries, DEFAULT_SEARCH_HTTP_MAX_RETRIES);
   assert.equal(config.searchHttpConcurrency, DEFAULT_SEARCH_HTTP_CONCURRENCY);
   assert.equal(config.testEndpointsEnabled, true);
+  assert.equal(config.ocrArchiveEnabled, false);
+  assert.equal(config.ocrArchiveDir, DEFAULT_OCR_ARCHIVE_DIR);
+  assert.equal(
+    config.ocrArchiveMinFreeBytes,
+    DEFAULT_OCR_ARCHIVE_MIN_FREE_BYTES,
+  );
 });

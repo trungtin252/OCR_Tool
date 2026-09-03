@@ -15,6 +15,10 @@ import {
   createStructuredChatCompletion,
 } from "@backend/shared/llm/llmGateway";
 
+interface ChatCompletionProcessingOptions {
+  fallbackOnEmptyContent?: boolean;
+}
+
 // deprecated
 export const processImagesWithOpenAI = async (
   imageBuffers: Buffer[],
@@ -77,6 +81,7 @@ export const processImagesWithOpenAI_chatCompletions = async (
   isParsed: boolean = false,
   formatDates: boolean = false,
   withSearchSchema: boolean = false,
+  options: ChatCompletionProcessingOptions = {},
 ) => {
   try {
     const imageInputs = buildChatImageInputs(imageBuffers, imageTypes);
@@ -91,11 +96,18 @@ export const processImagesWithOpenAI_chatCompletions = async (
       imageInputs,
       responseSchema: targetSchema,
       fallbackModel: FALLBACK_MODEL,
+      fallbackOnEmptyContent: options.fallbackOnEmptyContent ?? false,
     });
 
     const outputText = response.choices[0]?.message?.content;
 
     if (!outputText) {
+      const firstChoice = response.choices[0];
+      console.warn("Model returned no content", {
+        model: getModelForSchemaType(schemaType),
+        finishReason: firstChoice?.finish_reason ?? null,
+        hasRefusal: Boolean(firstChoice?.message?.refusal),
+      });
       throw new Error("No content received from model.");
     }
 

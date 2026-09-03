@@ -1,6 +1,8 @@
-import type { SchemaType } from "@backend/shared/contracts/schemaTypes";
-
-export type ProductSchemaType = Exclude<SchemaType, "receipt">;
+export type ProductSchemaType =
+  | "pesticide"
+  | "fertilizer"
+  | "fish_feed"
+  | "seed";
 export type SearchMode = "always" | "interactive" | "none";
 
 const PRODUCT_SCHEMA_TYPES = new Set<ProductSchemaType>([

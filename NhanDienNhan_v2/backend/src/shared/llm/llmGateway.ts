@@ -30,6 +30,7 @@ interface StructuredChatCompletionOptions {
   imageInputs: ChatImageInput[];
   responseSchema?: z.ZodType;
   fallbackModel?: string;
+  fallbackOnEmptyContent?: boolean;
 }
 
 interface StructuredTextCompletionOptions {
@@ -94,6 +95,7 @@ export async function createStructuredChatCompletion({
   imageInputs,
   responseSchema,
   fallbackModel,
+  fallbackOnEmptyContent = false,
 }: StructuredChatCompletionOptions) {
   const createCompletion = (requestedModel: string) =>
     client.chat.completions.create({
@@ -110,7 +112,23 @@ export async function createStructuredChatCompletion({
     });
 
   try {
-    return await createCompletion(model);
+    const response = await createCompletion(model);
+    const firstChoice = response.choices[0];
+
+    if (
+      fallbackModel &&
+      fallbackOnEmptyContent &&
+      !firstChoice?.message?.content
+    ) {
+      console.warn("Primary model returned no content; using fallback model", {
+        model,
+        finishReason: firstChoice?.finish_reason ?? null,
+        hasRefusal: Boolean(firstChoice?.message?.refusal),
+      });
+      return createCompletion(fallbackModel);
+    }
+
+    return response;
   } catch (error) {
     if (!fallbackModel || !isFallbackEligibleError(error)) {
       throw error;

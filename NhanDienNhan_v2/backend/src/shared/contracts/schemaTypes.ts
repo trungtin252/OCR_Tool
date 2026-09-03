@@ -4,4 +4,5 @@ export type SchemaType =
   | "pesticide"
   | "fertilizer"
   | "seed"
-  | "receipt";
+  | "receipt"
+  | "growing_area_certificate";

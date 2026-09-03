@@ -3,7 +3,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "test": "node --import tsx --test tests/regression.test.ts tests/llmContract.test.ts tests/config.test.ts tests/llmRegistry.test.ts tests/llmGateway.test.ts tests/productAnalysisService.test.ts tests/productController.test.ts tests/receiptAnalysisService.test.ts tests/receiptController.test.ts tests/errorUtils.test.ts tests/searchCache.test.ts tests/httpClient.test.ts tests/searchProviders.test.ts",
+    "test": "node --require ./tests/node-bootstrap.cjs --import tsx --test --test-concurrency=1 tests/regression.test.ts tests/llmContract.test.ts tests/config.test.ts tests/llmRegistry.test.ts tests/llmGateway.test.ts tests/productAnalysisService.test.ts tests/productController.test.ts tests/receiptAnalysisService.test.ts tests/receiptController.test.ts tests/gaCertificateAnalysisService.test.ts tests/gaCertificateController.test.ts tests/errorUtils.test.ts tests/searchCache.test.ts tests/httpClient.test.ts tests/searchProviders.test.ts tests/ocrArchive.test.ts",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.tests.json",
     "prettier": "prettier --check .",
     "prettier:fix": "prettier --write .",

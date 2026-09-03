@@ -9,6 +9,7 @@ import {
   SeedResponseSchema,
 } from "../src/modules/product/product.schema.js";
 import { DocumentResponseSchema } from "../src/modules/receipt/receipt.schema.js";
+import { GrowingAreaCertificateResponseSchema } from "../src/modules/ga_certificate/gaCertificate.schema.js";
 import {
   FALLBACK_MODEL,
   FUSION_MODEL,
@@ -27,8 +28,13 @@ test("model selection remains unchanged for every OCR and fusion flow", () => {
     fertilizer: "gemini-3.1-flash-lite",
     seed: "gemini-3.1-flash-lite",
     receipt: "gemini-3.1-flash-lite",
+    growing_area_certificate: "gemini-3.1-flash-lite",
   });
   assert.equal(getModelForSchemaType("pesticide"), "gemini-3.1-flash-lite");
+  assert.equal(
+    getModelForSchemaType("growing_area_certificate"),
+    "gemini-3.1-flash-lite",
+  );
   assert.equal(FALLBACK_MODEL, "gemini-2.5-flash");
   assert.equal(TEST_MODEL, "gemini-3.1-flash-lite");
   assert.equal(FUSION_MODEL, "gemini-3.1-flash-lite");
@@ -61,6 +67,10 @@ test("schema selection preserves every structured-output contract", () => {
   assert.equal(getResponseSchema("fish_feed"), FishFeedResponseSchema);
   assert.equal(getResponseSchema("seed"), SeedResponseSchema);
   assert.equal(getResponseSchema("receipt"), DocumentResponseSchema);
+  assert.equal(
+    getResponseSchema("growing_area_certificate"),
+    GrowingAreaCertificateResponseSchema,
+  );
   assert.equal(getTestResponseSchema("seed"), null);
   assert.equal(getTestResponseSchema(""), null);
 });

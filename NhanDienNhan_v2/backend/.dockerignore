@@ -12,6 +12,7 @@ README.md
 .idea
 *.log
 coverage
+data
 .DS_Store
 prettier.config.ts
 .prettierignore

@@ -22,6 +22,11 @@ import {
   SeedResponseSchema,
 } from "../src/modules/product/product.schema.js";
 import { DocumentResponseSchema } from "../src/modules/receipt/receipt.schema.js";
+import { growing_area_certificate_prompt } from "../src/modules/ga_certificate/gaCertificate.prompts.js";
+import {
+  GrowingAreaCertificateResponseContractSchema,
+  GrowingAreaCertificateResponseSchema,
+} from "../src/modules/ga_certificate/gaCertificate.schema.js";
 
 function sha256(value: string): string {
   return createHash("sha256").update(value, "utf8").digest("hex");
@@ -121,6 +126,27 @@ test("LLM response schemas, descriptions, defaults, and field shapes remain unch
     seed: "f5bc92fc500d8e2fe22be670317c357bb60cf48ff877efe604a869e5974c7a6b",
     receipt: "6c13f9227bf7a4a59c9604187037d70452b4100810b9348c395f734d56ed9c0f",
   });
+});
+
+test("ga_certificate prompt and schema remain locked", () => {
+  assert.equal(
+    sha256(growing_area_certificate_prompt),
+    "b6c08cebad108f0a76a1fa314297092362c15fd11e76039afe1a20fae68bd46c",
+  );
+  assert.equal(
+    sha256(
+      JSON.stringify(z.toJSONSchema(GrowingAreaCertificateResponseSchema)),
+    ),
+    "9e010db63041fe9d2c2a8b457a231e24a8e41deda678b46f4dfc73e0edadb0e0",
+  );
+  assert.equal(
+    sha256(
+      JSON.stringify(
+        z.toJSONSchema(GrowingAreaCertificateResponseContractSchema),
+      ),
+    ),
+    "43a8b50654bd4d0974ca21cd678a93fcb4df049f8065bf02e4be824bd7b1744a",
+  );
 });
 
 test("representative model responses still parse without response-shape changes", () => {

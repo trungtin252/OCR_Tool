@@ -1,413 +1,48 @@
-# Tài liệu Response Schema
+# Product OCR Response Schema
 
-Tài liệu này giải thích toàn bộ các trường trong API response trích xuất thông tin sản phẩm.
-Bao gồm khung response chung và trường riêng cho:
+Tài liệu này mô tả hợp đồng đang chạy của endpoint OCR nhãn sản phẩm. Nguồn
+quyền lực của cấu trúc dữ liệu là `src/modules/product/product.schema.ts` và
+`src/shared/contracts/baseResponse.schema.ts`.
 
-- Thuốc bảo vệ thực vật/thuốc thủy sản (pesticide)
-- Phân bón (fertilizer)
-- Thức ăn thủy sản (fish_feed)
-- Hạt giống (seed)
+## Endpoint
 
-Lưu ý:
+`POST /api/image/analyze`
 
-- Tất cả trường dưới đây có thể xuất hiện kể cả khi giá trị là null.
-- Chuỗi văn bản được trả về đúng như trên nhãn (không tự động chuẩn hóa).
+- Content type: `multipart/form-data`.
+- Field file: `images`.
+- Nhận JPEG, PNG, GIF, WebP; tối đa 10 file và 10 MB/file. PDF không được hỗ
+  trợ ở endpoint này.
 
----
+### Query
 
-## 1. Thông tin API (API Endpoints)
+| Query         | Giá trị thực tế                                | Mặc định    | Ý nghĩa                                                                                                |
+| ------------- | ---------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------ |
+| `category`    | `pesticide`, `fertilizer`, `fish_feed`, `seed` | `pesticide` | Danh mục OCR. Giá trị khác trả HTTP 400.                                                               |
+| `parsed`      | chỉ chuỗi `true` là bật                        | `false`     | `true` trả `data.response` là object; các giá trị khác trả chuỗi JSON.                                 |
+| `formatDates` | chỉ chuỗi `true` là bật                        | `false`     | Chuẩn hóa ngày hợp lệ về `DD/MM/YYYY`; có thể tính HSD khi có NSX và thời hạn.                         |
+| `searchMode`  | `none`, `always`, `interactive`                | `none`      | Chế độ search cho `pesticide` và `fertilizer`. Mọi giá trị khác, kể cả `off`, đều được hiểu là `none`. |
 
-### Trích xuất thông tin từ ảnh nhãn sản phẩm
+## HTTP response wrapper
 
-**URL**: `POST http://localhost:5000/api/image/analyze`
-thay đổi khi qua production
+Khi request hợp lệ, API trả HTTP 200:
 
-**Content-Type**: `multipart/form-data`
+```json
+{
+  "success": true,
+  "data": {
+    "response": {},
+    "totalImages": 1
+  }
+}
+```
 
-**Body**:
+## Phụ lục: mẫu response baseline ban đầu
 
-- `images`: Một hoặc nhiều file ảnh nhãn sản phẩm định dạng JPEG, PNG, GIF hoặc WebP. Tối đa 10 file, 10 MB/file; nội dung file được kiểm tra theo định dạng thực tế.
+Các JSON dưới đây được khôi phục nguyên văn từ baseline trước khi rút gọn tài
+liệu. Đây là mẫu kết quả thực tế để tham chiếu/test UI; contract đang chạy vẫn
+được mô tả ở các phần phía dưới.
 
-**Query Parameters**:
-
-| Tham số       | Kiểu dữ liệu | Mô tả                                                                                                                                                             |
-| :------------ | :----------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `category`    | string       | Danh mục sản phẩm (`pesticide`, `fertilizer`, `fish_feed`, `seed`). Nếu không truyền, hệ thống mặc định `pesticide`.                                              |
-| `parsed`      | boolean      | `true`: Trả về dữ liệu dạng JSON object. `false`: Trả về dữ liệu dạng chuỗi JSON stringized (mặc định).                                                           |
-| `formatDates` | boolean      | `true`: Chuẩn hóa các trường ngày tháng (`mfg_date`, `exp_date`) về định dạng chuẩn `DD/MM/YYYY` nếu có thể.                                                      |
-| `searchMode`  | string       | Chế độ tìm kiếm và làm giàu dữ liệu từ cơ sở dữ liệu chính phủ (`always`, `interactive`, `off`). Mặc định là `off`. (chỉ có ở danh mục `pesticide`, `fertilizer`) |
-
-Nếu `category` không thuộc danh sách hỗ trợ, API trả HTTP 400 thay vì gửi request không hợp lệ tới model.
-
----
-
-## 2. Khung Response Tổng (Top-level Response Wrapper)
-
-### success (boolean)
-
-Cho biết request tổng thể có xử lý thành công hay không.
-
-### data (object)
-
-Chứa kết quả trích xuất, dữ liệu thô, và thông tin làm giàu từ web.
-
-#### data.response (object)
-
-Kết quả trích xuất cuối cùng và trạng thái của sản phẩm. Đây là dữ liệu đã được đối soát và làm giàu (enriched) từ web nếu tìm kiếm thành công.
-
-#### data.raw (object)
-
-Dữ liệu trích xuất gốc trực tiếp từ ảnh (Vision AI) trước khi thực hiện bước làm giàu từ web. Cấu trúc bên trong tương tự như `data.response`, chỉ xuất hiện khi thực hiện tìm kiếm trực tuyến (khi `searchMode` là `always` hoặc `interactive` và được kích hoạt).
-
-#### data.search_metadata (object)
-
-Thông tin về kết quả tìm kiếm thông tin sản phẩm từ cơ sở dữ liệu chính phủ.
-
-#### data.search_decision (object)
-
-Quyết định tìm kiếm từ mô hình ngôn ngữ lớn (chỉ xuất hiện khi `searchMode` là `interactive`). Chứa thông tin về lý do mô hình quyết định có hoặc không thực hiện tìm kiếm trực tuyến.
-
-#### data.totalImages (number)
-
-Tổng số ảnh đã xử lý trong request.
-
----
-
-## 3. Thông tin tìm kiếm (data.search_metadata)
-
-### search_status (string enum)
-
-Trạng thái của quá trình tìm kiếm và làm giàu dữ liệu:
-
-- `enriched`: Tìm thấy sản phẩm trên web và đã hợp nhất dữ liệu thành công.
-- `not_found`: Không tìm thấy sản phẩm tương ứng trong cơ sở dữ liệu web.
-- `skipped`: Bỏ qua tìm kiếm do thiếu thông tin định danh (tên, số đăng ký).
-- `failed`: Lỗi trong quá trình tìm kiếm hoặc hợp nhất dữ liệu.
-- `unsupported_category`: Danh mục sản phẩm hiện chưa hỗ trợ tìm kiếm web.
-
-### source_url (string | null)
-
-Đường dẫn (URL) đến trang sản phẩm trên cổng thông tin chính phủ nếu tìm thấy.
-
-### search_query (string | null)
-
-Từ khóa đã được sử dụng để tìm kiếm trên web.
-
----
-
-## 4. Đối tượng data.response (hoặc data.raw)
-
-### success (boolean)
-
-Cho biết việc trích xuất có thành công hay không.
-
-### error_code (string enum)
-
-Mã lỗi nếu trích xuất thất bại.
-Giá trị có thể:
-
-- NONE
-- BLURRY_IMAGE
-- WRONG_PRODUCT_CATEGORY
-- TEXT_NOT_READABLE
-- MISSING_LABEL
-- UNKNOWN
-
-### message (string)
-
-Thông báo thân thiện cho UI.
-
-### metadata (object | null)
-
-Thông tin độ tin cậy và cảnh báo cần người kiểm tra. Để null nếu ảnh quá mờ
-và không trích xuất được gì.
-
-#### metadata.overall_confidence (number, 0..1)
-
-Độ tin cậy tổng thể của OCR/trích xuất.
-
-#### metadata.review_warnings (array)
-
-Danh sách trường cần người xem lại. Mảng rỗng nếu không có vấn đề.
-
-Mỗi phần tử trong review_warnings:
-
-- field (string): Tên trường nghi ngờ.
-- issue (string): Loại lỗi (ví dụ: TEXT_BLURRY, TABLE_UNCLEAR, AMBIGUOUS_VALUE, IMAGE_ROTATED).
-- message (string): Mô tả bằng tiếng Việt cho người duyệt.
-
-### data (object | null)
-
-Dữ liệu sản phẩm đã trích xuất. Cấu trúc phụ thuộc danh mục.
-
----
-
-## 5. Trường Chung Cho Tất Cả Danh Mục
-
-Những trường này xuất hiện ở mọi danh mục sản phẩm.
-
-### category (string enum)
-
-Danh mục sản phẩm.
-Giá trị có thể:
-
-- fish_feed
-- pesticide
-- fertilizer
-- seed
-- unknown
-
-### form_type (string enum | null)
-
-Dạng vật lý của sản phẩm.
-Giá trị có thể:
-
-- bot
-- nuoc
-- vien
-- hat
-- cay
-- khac
-
-### registrant (string | null)
-
-Tên công ty đăng ký hoặc nhà sản xuất.
-
-### product_name (string | null)
-
-Tên sản phẩm.
-
-### net_content (string | null)
-
-Giá trị định lượng (chỉ lấy số, dạng chuỗi).
-
-### net_unit (string enum | null)
-
-Đơn vị định lượng.
-Giá trị có thể:
-
-- gram
-- kg
-- lit
-- m
-- ml
-- m2
-- m3
-- kwh
-
-### package_type (string enum | null)
-
-Quy cách đóng gói.
-Giá trị có thể:
-
-- bao
-- bo
-- cai
-- cay
-- con
-- chai
-- cuon
-- goi
-- hop
-- lon
-- can
-- mieng
-- ong
-- tam
-- thanh
-- thung
-- tui
-- vien
-- nguoi
-- lan
-- gio
-- ngay
-- thang
-- nam
-
-### uses (string | null)
-
-Công dụng hoặc mục đích sử dụng.
-
-### mfg_date (string | null)
-
-Ngày sản xuất (NSX).
-
-### exp_date (string | null)
-
-Hạn sử dụng (HSD). Nếu nhãn chỉ ghi khoảng thời gian (ví dụ: "12 tháng") và không có ngày sản xuất cụ thể, thì đặt exp_date là chuỗi nguyên văn "12 tháng" và để mfg_date là null. Nếu có ngày sản xuất cụ thể và query param `formatDates` là `true` thì trích xuất ngày đó và tính hạn sử dụng dựa trên khoảng thời gian đã cho.
-
----
-
-## 6. Trường Riêng Cho Thuốc BVTV/Thủy Sản (category = "pesticide")
-
-### product_type (string | null)
-
-Loại sản phẩm.
-Giá trị có thể:
-
-- hoa_hoc
-- sinh_hoc
-
-### registration_number (string | null)
-
-Số đăng ký.
-
-### ingredients (array | string | null)
-
-Danh sách tất cả thành phần (hoạt chất, chất mang, phụ gia, độ ẩm...). Hoặc chuỗi văn bản nếu không tách được thành phần riêng lẻ.
-
-Mỗi phần tử trong ingredients:
-
-- name (string): Tên thành phần.
-- content (string | null): Hàm lượng (ví dụ: 50%, 1kg, vừa đủ).
-
-### dosage (array | string | null)
-
-Liều lượng sử dụng.
-Nếu có hướng dẫn theo từng đối tượng/mục đích thì là mảng đối tượng:
-
-- target (string): Đối tượng/mục đích áp dụng.
-- instruction (string): Hướng dẫn sử dụng.
-  Nếu chỉ có liều chung thì là chuỗi.
-
-### target_crops (array | null)
-
-Danh sách cây trồng/loài thủy sản áp dụng.
-
-### target_pests (array | null)
-
-Danh sách bệnh/dịch hại cần xử lý.
-
-### pre_harvest_interval_days (number | null)
-
-Thời gian cách ly trước thu hoạch (tính bằng ngày).
-
----
-
-## 7. Trường Riêng Cho Phân bón (category = "fertilizer")
-
-### product_type (string | null)
-
-Loại sản phẩm.
-Giá trị có thể:
-
-- vo_co
-- huu_co
-
-### registration_number (string | null)
-
-Số đăng ký (Mã số phân bón).
-
-### ingredients (array | string | null)
-
-Danh sách tất cả thành phần (hoạt chất, chất mang, phụ gia, độ ẩm...). Hoặc chuỗi văn bản nếu không tách được thành phần riêng lẻ.
-
-Mỗi phần tử trong ingredients:
-
-- name (string): Tên thành phần.
-- content (string | null): Hàm lượng (ví dụ: 50%, 1kg, vừa đủ).
-
-### dosage (array | string | null)
-
-Liều lượng sử dụng.
-Nếu có hướng dẫn theo từng đối tượng/mục đích thì là mảng đối tượng:
-
-- target (string): Đối tượng/mục đích áp dụng.
-- instruction (string): Hướng dẫn sử dụng.
-  Nếu chỉ có liều chung thì là chuỗi.
-
-### target_crops (array | null)
-
-Danh sách cây trồng áp dụng.
-
-### pre_harvest_interval_days (number | null)
-
-Thời gian cách ly trước thu hoạch (tính bằng ngày).
-
----
-
-## 8. Trường Riêng Cho Thức Ăn Thủy Sản (category = "fish_feed")
-
-### product_type (string | null)
-
-Loại sản phẩm thức ăn.
-
-### species (string | null)
-
-Loài thủy sản áp dụng.
-
-### ingredients (string | null)
-
-Danh sách thành phần (chuỗi văn bản).
-
-### variant_code (string | null)
-
-Mã biến thể sản phẩm.
-
-### nutrition_facts (array | null)
-
-Thành phần dinh dưỡng cho biến thể được chọn.
-
-Mỗi phần tử trong nutrition_facts:
-
-- name (string): Tên chất dinh dưỡng (ưu tiên tiếng Việt, không tự dịch).
-- value (string): Giá trị số (dạng chuỗi).
-- unit (string | null): Đơn vị (g, mg, %, ...).
-
-### feeding_guide (object | string | null)
-
-Hướng dẫn cho ăn theo biến thể hoặc hướng dẫn chung.
-
-Nếu là object (theo biến thể):
-
-- code (string | null): Mã biến thể, phải trùng với variant_code nếu có.
-- guide (array): Danh sách mục hướng dẫn.
-  Mỗi phần tử:
-  - name (string): Tên mục hướng dẫn.
-  - value (string): Nội dung hướng dẫn.
-
-Nếu là string: hướng dẫn chung cho sản phẩm.
-
----
-
-## 9. Trường Riêng Cho Hạt Giống (category = "seed")
-
-### cropping_season (array | null)
-
-Danh sách vụ mùa trồng/áp dụng.
-
-### growth_duration (string | null)
-
-Thời gian sinh trưởng của giống cây.
-
-### lot_number (string | null)
-
-Mã số lô giống.
-
-### manufacturer (string | null)
-
-Nơi sản xuất / Trại nhân giống.
-
-### origin (string | null)
-
-Xuất xứ của giống cây.
-
-### quality_criteria (array | null)
-
-Danh sách các chỉ tiêu kỹ thuật/chất lượng hạt giống.
-
-Mỗi phần tử trong quality_criteria:
-
-- name (string): Tên chỉ tiêu chất lượng.
-- value (string): Giá trị tiêu chuẩn/kết quả.
-- unit (string | null): Đơn vị tính.
-
----
-
-## 10. Ví Dụ JSON Và Giải Thích
-
-### 10.1. Ví dụ Pesticide (Đã làm giàu từ web)
+### Pesticide — đã làm giàu từ web
 
 ```json
 {
@@ -444,7 +79,7 @@ Mỗi phần tử trong quality_criteria:
 }
 ```
 
-### 10.2. Ví dụ Fertilizer (Phân bón - Đã làm giàu từ web)
+### Fertilizer — đã làm giàu từ web
 
 ```json
 {
@@ -602,7 +237,7 @@ Mỗi phần tử trong quality_criteria:
 }
 ```
 
-### 10.3. Ví dụ Fish Feed (Thức ăn thủy sản)
+### Fish Feed — thức ăn thủy sản
 
 ```json
 {
@@ -807,7 +442,7 @@ Mỗi phần tử trong quality_criteria:
 }
 ```
 
-### 10.4. Ví dụ Giống Cây Trồng (Seed)
+### Seed — giống cây trồng
 
 ```json
 {
@@ -876,12 +511,256 @@ Mỗi phần tử trong quality_criteria:
 }
 ```
 
-Giải thích nhanh:
+Ghi chú từ baseline:
 
-- **data.response**: Kết quả cuối cùng (đã hợp nhất từ web nếu có).
-- **data.raw**: Kết quả thô từ Vision AI (chỉ có khi search web được thực hiện).
-- **data.search_metadata**: Trạng thái và nguồn dữ liệu tìm kiếm.
-- **registrant**: Công ty đăng ký sản phẩm (thay thế cho manufacturer).
-- **dosage.instruction**: Nội dung hướng dẫn chi tiết (thanh thế cho amount trong các schema cũ).
-- **pre_harvest_interval_days**: Số ngày cách ly (số nguyên).
-- **totalImages**: Số lượng ảnh trong request gốc.
+- `data.response` là kết quả cuối cùng, đã hợp nhất dữ liệu web nếu có.
+- `data.raw` là kết quả Vision AI gốc, chỉ có khi search web được thực hiện.
+- `data.search_metadata` chứa trạng thái và nguồn search.
+- `registrant` là công ty đăng ký sản phẩm.
+- `dosage.instruction` là hướng dẫn chi tiết.
+- `pre_harvest_interval_days` là số ngày cách ly.
+- `totalImages` là số ảnh của request gốc.
+
+## HTTP response wrapper — chi tiết
+
+- `data.response`: kết quả OCR cuối cùng. Kiểu là object khi `parsed=true`,
+  nếu không là chuỗi JSON chứa object cùng cấu trúc.
+- `data.totalImages`: số ảnh upload đã xử lý.
+- `data.raw`: chỉ xuất hiện khi search được kích hoạt bởi search gate; là OCR
+  gốc trước Fusion.
+- `data.search_metadata`: chỉ xuất hiện khi search gate được kích hoạt.
+- `data.search_decision`: chỉ xuất hiện ở `searchMode=interactive` khi model
+  trả quyết định search.
+
+Lỗi upload, thiếu `images` hoặc `category` không hợp lệ trả HTTP 400:
+
+```json
+{
+  "success": false,
+  "error": "...",
+  "message": "..."
+}
+```
+
+## Cấu trúc `data.response` khi `parsed=true`
+
+```text
+success: boolean
+error_code: NONE | BLURRY_IMAGE | WRONG_PRODUCT_CATEGORY |
+            TEXT_NOT_READABLE | MISSING_LABEL | UNKNOWN
+message: string
+metadata: { overall_confidence, review_warnings } | null
+data: ProductData | null
+search_decision: { needs_web_search, search_reason } | null
+```
+
+`search_decision` chỉ có trong response schema của `pesticide`/`fertilizer`
+khi request dùng `searchMode=interactive`.
+
+### Metadata
+
+```text
+metadata.overall_confidence: number từ 0 đến 1
+metadata.review_warnings: ReviewWarning[]
+ReviewWarning.field: string | null
+ReviewWarning.issue: string
+ReviewWarning.message: string
+```
+
+`metadata` có thể là `null`. `issue` không phải enum cố định; ví dụ phổ biến
+là `TEXT_BLURRY`, `TABLE_UNCLEAR`, `AMBIGUOUS_VALUE`, `IMAGE_ROTATED` hoặc
+`MATH_MISMATCH` khi có xử lý hậu kỳ phù hợp.
+
+## Trường chung trong `data`
+
+Các trường dưới đây có ở mọi category, ngoại trừ `form_type` của `seed` dùng
+enum riêng.
+
+| Field          | Kiểu           | Giá trị/ghi chú                                                                                                                                                                      |
+| -------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `category`     | enum           | `pesticide`, `fertilizer`, `fish_feed`, `seed`, `unknown`; schema theo category thành công dùng literal tương ứng.                                                                   |
+| `form_type`    | enum \| null   | Product thường: `bot`, `nuoc`, `vien`, `khac`. Seed: `hat`, `cay`, `khac`.                                                                                                           |
+| `registrant`   | string \| null | Công ty/tổ chức đăng ký.                                                                                                                                                             |
+| `product_name` | string \| null | Tên đầy đủ trên nhãn, gồm tên phụ/marketing nếu có.                                                                                                                                  |
+| `net_content`  | string \| null | Phần giá trị định lượng.                                                                                                                                                             |
+| `net_unit`     | enum \| null   | `gram`, `kg`, `lit`, `m`, `ml`, `m2`, `m3`, `kwh`.                                                                                                                                   |
+| `package_type` | enum \| null   | `bao`, `bo`, `cai`, `cay`, `con`, `chai`, `cuon`, `goi`, `hop`, `lon`, `can`, `mieng`, `ong`, `tam`, `thanh`, `thung`, `tui`, `vien`, `nguoi`, `lan`, `gio`, `ngay`, `thang`, `nam`. |
+| `mfg_date`     | string \| null | Ngày sản xuất.                                                                                                                                                                       |
+| `exp_date`     | string \| null | Hạn sử dụng hoặc thời hạn nguyên văn. Khi `formatDates=true`, hệ thống chuẩn hóa/tính được nếu dữ liệu đủ rõ.                                                                        |
+
+### Quy ước đơn vị và mẫu response
+
+`net_unit` là **mã enum trả về**, không phải đơn vị nguyên văn trên nhãn và
+không được xử lý bằng regex ở backend. Schema gửi cho model buộc trường này
+chỉ nhận một trong các mã sau; giá trị khác làm response của model không qua
+được validation.
+
+| Mã trả về `net_unit` | Đơn vị được mô tả cho model |
+| -------------------- | --------------------------- |
+| `gram`               | Gram                        |
+| `kg`                 | Kg                          |
+| `lit`                | Lít                         |
+| `m`                  | Mét                         |
+| `ml`                 | ml                          |
+| `m2`                 | M^2                         |
+| `m3`                 | M^3                         |
+| `kwh`                | KWh                         |
+
+Các mẫu response dưới đây ghi lại quy ước đang áp dụng. Chúng là mẫu dữ liệu
+cho UI/test; schema đầy đủ vẫn được quyết định bởi category tương ứng ở các
+phần sau.
+
+```json
+{
+  "success": true,
+  "data": {
+    "response": {
+      "success": true,
+      "error_code": "NONE",
+      "message": "Trích xuất thông tin sản phẩm thành công.",
+      "metadata": { "overall_confidence": 0.95, "review_warnings": [] },
+      "data": {
+        "category": "pesticide",
+        "product_name": "GANCLEAR3979",
+        "net_content": "1",
+        "net_unit": "kg",
+        "package_type": "goi"
+      }
+    },
+    "totalImages": 1
+  }
+}
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "response": {
+      "success": true,
+      "error_code": "NONE",
+      "message": "Trích xuất thông tin sản phẩm thành công.",
+      "metadata": { "overall_confidence": 0.95, "review_warnings": [] },
+      "data": {
+        "category": "fertilizer",
+        "product_name": "Microtop Chelated - PHỤ GIA LẤY NHỤY",
+        "net_content": "500",
+        "net_unit": "ml",
+        "package_type": "chai"
+      }
+    },
+    "totalImages": 3
+  }
+}
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "response": {
+      "success": true,
+      "error_code": "NONE",
+      "message": "Trích xuất thông tin thành công.",
+      "metadata": { "overall_confidence": 0.95, "review_warnings": [] },
+      "data": {
+        "category": "fish_feed",
+        "product_name": "UP - THỨC ĂN HỖN HỢP CHO CÁ GIỐNG",
+        "net_content": "10",
+        "net_unit": "kg",
+        "package_type": "bao"
+      }
+    },
+    "totalImages": 2
+  }
+}
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "response": {
+      "success": true,
+      "error_code": "NONE",
+      "message": "Trích xuất thành công.",
+      "metadata": { "overall_confidence": 0.95, "review_warnings": [] },
+      "data": {
+        "category": "seed",
+        "product_name": "GIỐNG LÚA ST25 CẤP XÁC NHẬN 1",
+        "net_content": "50",
+        "net_unit": "kg",
+        "package_type": "bao"
+      }
+    },
+    "totalImages": 2
+  }
+}
+```
+
+## `pesticide`
+
+Ngoài trường chung, `data` có:
+
+| Field                       | Kiểu                                                          |
+| --------------------------- | ------------------------------------------------------------- |
+| `product_type`              | `hoa_hoc` \| `sinh_hoc` \| null                               |
+| `registration_number`       | string \| null                                                |
+| `uses`                      | string \| null                                                |
+| `ingredients`               | `{ name: string, content: string \| null }[] \| null`         |
+| `dosage`                    | `{ target: string, instruction: string }[] \| string \| null` |
+| `target_crops`              | string[] \| null                                              |
+| `target_pests`              | string[] \| null                                              |
+| `pre_harvest_interval_days` | integer; mặc định `7` nếu model không trả giá trị             |
+
+## `fertilizer`
+
+Ngoài trường chung, `data` có:
+
+| Field                       | Kiểu                                                          |
+| --------------------------- | ------------------------------------------------------------- |
+| `product_type`              | `vo_co` \| `huu_co` \| null                                   |
+| `registration_number`       | string \| null                                                |
+| `uses`                      | string \| null                                                |
+| `ingredients`               | `{ name: string, content: string \| null }[] \| null`         |
+| `dosage`                    | `{ target: string, instruction: string }[] \| string \| null` |
+| `target_crops`              | string[] \| null                                              |
+| `pre_harvest_interval_days` | integer; mặc định `7` nếu model không trả giá trị             |
+
+## `fish_feed`
+
+Ngoài trường chung, `data` có:
+
+| Field             | Kiểu                                                                                   |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| `product_type`    | string \| null                                                                         |
+| `species`         | string \| null                                                                         |
+| `uses`            | string \| null                                                                         |
+| `ingredients`     | string \| null                                                                         |
+| `variant_code`    | string \| null                                                                         |
+| `nutrition_facts` | `{ name: string, value: string, unit: string \| null }[] \| null`                      |
+| `feeding_guide`   | `{ code: string \| null, guide: { name: string, value: string }[] } \| string \| null` |
+
+## `seed`
+
+Ngoài trường chung (với `form_type` là `hat`, `cay`, `khac`), `data` có:
+
+| Field              | Kiểu                                                              |
+| ------------------ | ----------------------------------------------------------------- |
+| `cropping_season`  | string[] \| null                                                  |
+| `growth_duration`  | string \| null                                                    |
+| `lot_number`       | string \| null                                                    |
+| `manufacturer`     | string \| null                                                    |
+| `origin`           | string \| null                                                    |
+| `quality_criteria` | `{ name: string, value: string, unit: string \| null }[] \| null` |
+
+## Search metadata
+
+```text
+search_status: enriched | not_found | skipped | failed | unsupported_category
+source_url?: string
+search_query?: string
+```
+
+`source_url` và `search_query` là optional: key bị bỏ khi không có giá trị,
+không trả `null`. Search lỗi hoặc không tìm thấy không làm OCR chính thất bại.

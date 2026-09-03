@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import imageRoutes from "./modules/product/product.routes";
 import receiptRoutes from "./modules/receipt/receipt.routes";
+import gaCertificateRoutes from "./modules/ga_certificate/gaCertificate.routes";
 import imageDiagnosticsRoutes from "./diagnostics/imageDiagnostics.routes";
 import { errorHandler } from "./shared/errors/error.middleware";
 import { appConfig } from "./config/env";
@@ -17,6 +18,7 @@ app.use(
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true, // Cho phép cookies/sessions cross-origin
     allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["X-OCR-Archive-Status"],
   }),
 );
 
@@ -27,6 +29,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/image", imageRoutes);
 app.use("/api/image", imageDiagnosticsRoutes);
 app.use("/api/receipt", receiptRoutes);
+app.use("/api/ga_certificate", gaCertificateRoutes);
 app.get("/", (req, res) => {
   res.send("Welcome to the Image Analysis API\n");
 });

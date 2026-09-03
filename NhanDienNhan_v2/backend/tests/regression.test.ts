@@ -23,6 +23,7 @@ test("product category parsing keeps the documented default", () => {
   assert.equal(parseProductSchemaType(undefined), "pesticide");
   assert.equal(parseProductSchemaType("fertilizer"), "fertilizer");
   assert.equal(parseProductSchemaType("receipt"), null);
+  assert.equal(parseProductSchemaType("growing_area_certificate"), null);
   assert.equal(parseProductSchemaType("unknown"), null);
   assert.equal(parseProductSchemaType(["pesticide"]), null);
 });
@@ -229,6 +230,21 @@ test("HTTP endpoint validation returns stable JSON errors without calling the LL
       message: string;
     };
     assert.equal(missingReceiptBody.error, missingReceiptBody.message);
+
+    const missingGrowingAreaCertificateResponse = await fetch(
+      `${baseUrl}/api/ga_certificate/analyze`,
+      { method: "POST" },
+    );
+    assert.equal(missingGrowingAreaCertificateResponse.status, 400);
+    const missingGrowingAreaCertificateBody =
+      (await missingGrowingAreaCertificateResponse.json()) as {
+        error: string;
+        message: string;
+      };
+    assert.equal(
+      missingGrowingAreaCertificateBody.error,
+      missingGrowingAreaCertificateBody.message,
+    );
   } finally {
     await new Promise<void>((resolve, reject) => {
       server.close((error?: Error) => (error ? reject(error) : resolve()));

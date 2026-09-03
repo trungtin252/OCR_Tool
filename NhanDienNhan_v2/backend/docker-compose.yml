@@ -1,0 +1,16 @@
+services:
+  backend:
+    image: nhan-dien-nhan-backend:local
+    build:
+      context: .
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    environment:
+      OCR_ARCHIVE_ENABLED: "true"
+      OCR_ARCHIVE_DIR: /app/data/ocr-history
+      OCR_ARCHIVE_MIN_FREE_BYTES: "1073741824"
+    volumes:
+      - ${OCR_ARCHIVE_HOST_DIR:-/srv/ocr-data}:/app/data/ocr-history
+    restart: unless-stopped

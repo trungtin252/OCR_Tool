@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import path from "node:path";
 
 dotenv.config({ quiet: true });
 
@@ -9,6 +10,11 @@ export const DEFAULT_SEARCH_CACHE_MAX_ENTRIES = 200;
 export const DEFAULT_SEARCH_HTTP_TIMEOUT_MS = 8_000;
 export const DEFAULT_SEARCH_HTTP_MAX_RETRIES = 2;
 export const DEFAULT_SEARCH_HTTP_CONCURRENCY = 2;
+export const DEFAULT_OCR_ARCHIVE_DIR = path.resolve(
+  process.cwd(),
+  "data/ocr-history",
+);
+export const DEFAULT_OCR_ARCHIVE_MIN_FREE_BYTES = 1_073_741_824;
 
 type Environment = Readonly<Record<string, string | undefined>>;
 
@@ -23,6 +29,9 @@ export interface AppConfig {
   searchHttpTimeoutMs: number;
   searchHttpMaxRetries: number;
   searchHttpConcurrency: number;
+  ocrArchiveEnabled: boolean;
+  ocrArchiveDir: string;
+  ocrArchiveMinFreeBytes: number;
 }
 
 function parsePositiveInteger(
@@ -100,6 +109,15 @@ export function createAppConfig(
       environment.SEARCH_HTTP_CONCURRENCY,
       DEFAULT_SEARCH_HTTP_CONCURRENCY,
       10,
+    ),
+    // Archiving is enabled by default for OCR endpoints. The exact lowercase
+    // string "false" is the explicit operational off switch.
+    ocrArchiveEnabled: environment.OCR_ARCHIVE_ENABLED !== "false",
+    ocrArchiveDir:
+      environment.OCR_ARCHIVE_DIR?.trim() || DEFAULT_OCR_ARCHIVE_DIR,
+    ocrArchiveMinFreeBytes: parseNonNegativeInteger(
+      environment.OCR_ARCHIVE_MIN_FREE_BYTES,
+      DEFAULT_OCR_ARCHIVE_MIN_FREE_BYTES,
     ),
   };
 }
