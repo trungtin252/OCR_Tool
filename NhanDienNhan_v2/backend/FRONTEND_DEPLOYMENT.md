@@ -5,6 +5,11 @@ host port and does not restart or replace the existing `o2n-web` container that
 serves `agent.o2n.ai.vn`. The existing Nginx selects the frontend by hostname
 and proxies it over a shared Docker network.
 
+The frontend image definition is kept with the frontend source:
+`frontend/Dockerfile`, `frontend/nginx.conf`, and `frontend/.dockerignore`.
+The backend directory retains only the compose file and the outer Nginx virtual
+host because those connect the frontend to the current server infrastructure.
+
 ## 1. Connect the new frontend to the current Nginx network
 
 On the server, in `NhanDienNhan_v2/backend`, discover the actual network used

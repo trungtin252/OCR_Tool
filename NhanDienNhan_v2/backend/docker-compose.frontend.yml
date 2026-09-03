@@ -8,9 +8,8 @@ services:
   frontend:
     image: nhan-dien-nhan-frontend:local
     build:
-      # The frontend and deployment files are siblings of backend.
-      context: ..
-      dockerfile: backend/deploy/frontend.Dockerfile
+      context: ../frontend
+      dockerfile: Dockerfile
       args:
         VITE_BACKEND_URL: ${VITE_BACKEND_URL:-https://ocr.o2n.ai.vn}
     networks:
