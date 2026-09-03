@@ -1,14 +1,10 @@
-# Starts only the OCR demo frontend. It intentionally does not alter or
-# restart the backend service declared in docker-compose.yml.
-#
+# Starts only the OCR demo frontend. It does not alter or restart the backend.
 # OCR_INGRESS_NETWORK must be the existing Docker network used by `o2n-web`.
-# Find it with:
-# docker inspect o2n-web --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}'
 services:
   frontend:
     image: nhan-dien-nhan-frontend:local
     build:
-      context: ../frontend
+      context: .
       dockerfile: Dockerfile
       args:
         VITE_BACKEND_URL: ${VITE_BACKEND_URL:-https://ocr.o2n.ai.vn}

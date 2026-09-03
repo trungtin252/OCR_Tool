@@ -1,7 +1,7 @@
 # Docker deployment
 
 For the separate OCR frontend at `ocrfe.o2n.ai.vn`, see
-[`FRONTEND_DEPLOYMENT.md`](FRONTEND_DEPLOYMENT.md).
+[`../frontend/DEPLOYMENT.md`](../frontend/DEPLOYMENT.md).
 
 ## Build image local
 
