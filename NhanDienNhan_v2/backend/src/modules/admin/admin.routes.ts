@@ -6,6 +6,7 @@ import {
   OCR_INTERACTION_TYPES,
   OcrHistoryService,
   isValidOcrHistoryId,
+  isValidOcrTrashEntryId,
   type OcrHistoryStatus,
   type OcrInteractionType,
 } from "./ocrHistory.service";
@@ -96,6 +97,14 @@ function parseArchiveId(value: string | string[] | undefined): string {
   return id;
 }
 
+function parseTrashEntryId(value: string | string[] | undefined): string {
+  const id = routeParam(value);
+  if (!isValidOcrTrashEntryId(id)) {
+    throw new AppError(400, "ID thùng rác không hợp lệ");
+  }
+  return id;
+}
+
 function safeDownloadFilename(filename: string): string {
   return filename.replace(/[\\/\r\n"]/g, "_") || "ocr-file";
 }
@@ -111,6 +120,21 @@ function parseBulkDeleteIds(body: unknown): string[] {
   const uniqueIds = [...new Set(ids)];
   if (uniqueIds.some((id) => typeof id !== "string" || !isValidOcrHistoryId(id))) {
     throw new AppError(400, "Danh sách ID xóa không hợp lệ");
+  }
+  return uniqueIds as string[];
+}
+
+function parseBulkTrashIds(body: unknown): string[] {
+  const ids =
+    typeof body === "object" && body !== null && Array.isArray((body as { trash_ids?: unknown }).trash_ids)
+      ? (body as { trash_ids: unknown[] }).trash_ids
+      : null;
+  if (!ids || ids.length === 0 || ids.length > MAX_BULK_DELETE_IDS) {
+    throw new AppError(400, "Danh sách thùng rác không hợp lệ");
+  }
+  const uniqueIds = [...new Set(ids)];
+  if (uniqueIds.some((id) => typeof id !== "string" || !isValidOcrTrashEntryId(id))) {
+    throw new AppError(400, "Danh sách thùng rác không hợp lệ");
   }
   return uniqueIds as string[];
 }
@@ -206,6 +230,73 @@ export function createAdminRoutes(
               .map((result) => ({ id: result.id, reason: result.status })),
           },
         });
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.get(
+    "/ocr-history/trash",
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const data = await service.listTrash(
+          parsePositiveInteger(request.query.page, 1, 1_000_000, "page"),
+          parsePositiveInteger(
+            request.query.page_size,
+            DEFAULT_PAGE_SIZE,
+            MAX_PAGE_SIZE,
+            "page_size",
+          ),
+        );
+        response.json({ success: true, data });
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    "/ocr-history/trash/bulk-delete",
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const trashIds = parseBulkTrashIds(request.body);
+        const results = await Promise.all(
+          trashIds.map(async (trashId) => ({
+            trashId,
+            status: await service.purgeTrash(trashId),
+          })),
+        );
+        response.json({
+          success: true,
+          data: {
+            deleted_ids: results
+              .filter((result) => result.status === "deleted")
+              .map((result) => result.trashId),
+            failed: results
+              .filter((result) => result.status !== "deleted")
+              .map((result) => ({ id: result.trashId, reason: result.status })),
+          },
+        });
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.delete(
+    "/ocr-history/trash/:trashId",
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const trashId = parseTrashEntryId(request.params.trashId);
+        const status = await service.purgeTrash(trashId);
+        if (status === "not_found") {
+          throw new AppError(404, "Không tìm thấy bản ghi trong thùng rác");
+        }
+        if (status === "conflict") {
+          throw new AppError(409, "Không thể xóa bản ghi thùng rác lúc này");
+        }
+        response.json({ success: true, data: { id: trashId, status } });
       } catch (error) {
         next(error);
       }

@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Upload, X } from "lucide-react";
 import type { ProductCategory, SearchMode } from "../apis/imageApi";
+import { CameraCapture } from "./CameraCapture";
 import {
   Select,
   SelectContent,
@@ -246,22 +247,41 @@ export function ImageUpload({
       )}
 
       <div
-        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${
+        className={`rounded-2xl border p-4 shadow-sm transition-all sm:p-5 ${
           isDragOver
-            ? "border-purple-600 bg-purple-50"
-            : "border-purple-400 bg-blue-50 hover:bg-purple-50"
+            ? "border-purple-400 bg-purple-50"
+            : "border-purple-100 bg-gradient-to-br from-purple-50/80 to-white"
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
       >
-        <Upload className="mx-auto h-12 w-12 text-purple-600 mb-3" />
-        <div className="text-base font-medium text-gray-900">
-          Nhấp hoặc kéo ảnh vào đây
+        <div className="mb-4">
+          <p className="text-sm font-semibold text-slate-900">Thêm ảnh sản phẩm</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Chọn một cách bên dưới hoặc kéo ảnh vào vùng này.
+          </p>
         </div>
-        <div className="text-sm text-gray-500 mt-1">
-          Tải lên 1-3 ảnh sản phẩm (JPG, PNG, WebP)
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <CameraCapture
+            className="flex min-h-[132px] w-full flex-col items-start justify-center gap-2 rounded-2xl border border-purple-200 bg-white px-5 py-4 text-left text-base font-semibold text-purple-700 shadow-sm transition hover:-translate-y-0.5 hover:border-purple-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={isLoading || selectedFiles.length >= MAX_FILES}
+            description="Dùng camera của thiết bị"
+            label="Chụp ảnh trực tiếp"
+            onCapture={(file) => handleFiles([file])}
+          />
+          <button
+            className="flex min-h-[132px] w-full flex-col items-start justify-center gap-2 rounded-2xl border border-blue-200 bg-white px-5 py-4 text-left text-base font-semibold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={isLoading || selectedFiles.length >= MAX_FILES}
+            onClick={() => fileInputRef.current?.click()}
+            type="button"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50">
+              <Upload aria-hidden="true" className="h-5 w-5" />
+            </span>
+            <span>Tải ảnh lên</span>
+            <span className="text-sm font-normal text-blue-700/70">Chọn ảnh có sẵn từ thiết bị</span>
+          </button>
         </div>
         <input
           ref={fileInputRef}

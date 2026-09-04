@@ -5,6 +5,7 @@ import {
   readFile,
   readdir,
   rename,
+  rm,
   stat,
   writeFile,
 } from "node:fs/promises";
@@ -78,6 +79,21 @@ export interface OcrHistoryDetail {
   raw_output: unknown;
 }
 
+export interface OcrTrashItem {
+  trash_id: string;
+  trashed_at: string | null;
+  size_bytes: number;
+  item: OcrHistoryItem;
+}
+
+export interface OcrTrashListResult {
+  items: OcrTrashItem[];
+  total: number;
+  total_size_bytes: number;
+  page: number;
+  page_size: number;
+}
+
 export interface OcrHistoryFileContent {
   absolutePath: string;
   originalName: string;
@@ -104,7 +120,12 @@ interface ArchiveRecord {
   inputFiles: ArchiveInputFile[];
 }
 
+interface TrashRecord extends OcrTrashItem {
+  directory: string;
+}
+
 const SAFE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$/;
+const TRASH_ENTRY_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{9}Z_[0-9a-f-]{36}_[A-Za-z0-9][A-Za-z0-9_-]{0,199}$/i;
 const DATE_DIRECTORY_PATTERN = /^\d{2}$/;
 const YEAR_DIRECTORY_PATTERN = /^\d{4}$/;
 const STORED_FILENAME_PATTERN = /^\d{3}\.(?:jpg|png|gif|webp|pdf)$/i;
@@ -227,6 +248,16 @@ export function isValidOcrHistoryId(id: string): boolean {
   return SAFE_ID_PATTERN.test(id);
 }
 
+export function isValidOcrTrashEntryId(id: string): boolean {
+  return TRASH_ENTRY_PATTERN.test(id);
+}
+
+function parseTrashedAt(entryName: string): string | null {
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2})(\d{2})(\d{2})(\d{3})Z_/.exec(entryName);
+  if (!match) return null;
+  return `${match[1]}T${match[2]}:${match[3]}:${match[4]}.${match[5]}Z`;
+}
+
 export class OcrHistoryService {
   constructor(private readonly archiveDirectory: string) {}
 
@@ -310,6 +341,22 @@ export class OcrHistoryService {
     };
   }
 
+  async listTrash(page: number, pageSize: number): Promise<OcrTrashListResult> {
+    const records = await this.scanTrashRecords();
+    records.sort(
+      (left, right) =>
+        parseCreatedAt(right.trashed_at) - parseCreatedAt(left.trashed_at),
+    );
+    const start = (page - 1) * pageSize;
+    return {
+      items: records.slice(start, start + pageSize).map(({ directory, ...item }) => item),
+      total: records.length,
+      total_size_bytes: records.reduce((total, record) => total + record.size_bytes, 0),
+      page,
+      page_size: pageSize,
+    };
+  }
+
   async trash(id: string): Promise<"moved" | "not_found" | "conflict"> {
     const record = await this.findById(id);
     if (!record) return "not_found";
@@ -323,6 +370,29 @@ export class OcrHistoryService {
       await mkdir(trashDirectory, { recursive: true });
       await rename(record.directory, destination);
       return "moved";
+    } catch (error) {
+      if (isNotFound(error)) return "not_found";
+      if (isConflict(error)) return "conflict";
+      throw error;
+    }
+  }
+
+  async purgeTrash(
+    trashId: string,
+  ): Promise<"deleted" | "not_found" | "conflict"> {
+    if (!isValidOcrTrashEntryId(trashId)) return "not_found";
+    const record = (await this.scanTrashRecords()).find(
+      (candidate) => candidate.trash_id === trashId,
+    );
+    if (!record) return "not_found";
+    try {
+      await rm(record.directory, {
+        recursive: true,
+        force: false,
+        maxRetries: 2,
+        retryDelay: 100,
+      });
+      return "deleted";
     } catch (error) {
       if (isNotFound(error)) return "not_found";
       if (isConflict(error)) return "conflict";
@@ -373,6 +443,29 @@ export class OcrHistoryService {
     if (!isValidOcrHistoryId(id)) return null;
     const records = await this.scanRecords();
     return records.find((record) => record.item.id === id) ?? null;
+  }
+
+  private async scanTrashRecords(): Promise<TrashRecord[]> {
+    const trashDirectory = path.join(this.archiveDirectory, ".trash");
+    const entries = (await this.readDirectories(trashDirectory)).filter(
+      isValidOcrTrashEntryId,
+    );
+    return Promise.all(
+      entries.map(async (trashId) => {
+        const directory = path.join(trashDirectory, trashId);
+        const [record, sizeBytes] = await Promise.all([
+          this.recordFromDirectory(directory),
+          this.directorySizeBytes(directory),
+        ]);
+        return {
+          trash_id: trashId,
+          trashed_at: parseTrashedAt(trashId),
+          size_bytes: sizeBytes,
+          item: record.item,
+          directory,
+        };
+      }),
+    );
   }
 
   private async scanRecords(): Promise<ArchiveRecord[]> {
@@ -451,6 +544,20 @@ export class OcrHistoryService {
       interaction,
       inputFiles: parsed.inputFiles,
     };
+  }
+
+  private async directorySizeBytes(directory: string): Promise<number> {
+    let total = 0;
+    const entries = await readdir(directory, { withFileTypes: true });
+    for (const entry of entries) {
+      const entryPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        total += await this.directorySizeBytes(entryPath);
+      } else if (entry.isFile()) {
+        total += (await stat(entryPath)).size;
+      }
+    }
+    return total;
   }
 
   private async readOptionalJson(filename: string): Promise<unknown> {

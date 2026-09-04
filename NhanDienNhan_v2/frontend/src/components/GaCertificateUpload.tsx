@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { FileText, Image, Upload, X } from "lucide-react";
+import { CameraCapture } from "./CameraCapture";
 
 const MAX_FILES = 10;
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
@@ -92,12 +93,11 @@ export function GaCertificateUpload({
       )}
 
       <div
-        className={`cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all ${
+        className={`rounded-2xl border p-4 shadow-sm transition-all sm:p-5 ${
           isDragOver
-            ? "border-teal-600 bg-teal-50"
-            : "border-teal-400 bg-cyan-50 hover:bg-teal-50"
+            ? "border-teal-400 bg-teal-50"
+            : "border-teal-100 bg-gradient-to-br from-teal-50/80 to-white"
         } ${isLoading ? "pointer-events-none opacity-50" : ""}`}
-        onClick={() => fileInputRef.current?.click()}
         onDragLeave={(event) => {
           event.preventDefault();
           setIsDragOver(false);
@@ -112,13 +112,33 @@ export function GaCertificateUpload({
           addFiles(Array.from(event.dataTransfer.files));
         }}
       >
-        <Upload className="mx-auto mb-3 h-12 w-12 text-teal-700" />
-        <p className="text-base font-semibold text-gray-900">
-          Nhấp hoặc kéo file vào đây
-        </p>
-        <p className="mt-1 text-sm text-gray-500">
-          JPEG, PNG, GIF, WebP hoặc PDF — tối đa {MAX_FILES} file, 10 MB/file
-        </p>
+        <div className="mb-4">
+          <p className="text-sm font-semibold text-slate-900">Thêm giấy chứng nhận</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Chụp, chọn file có sẵn hoặc kéo thả từng trang vào vùng này.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <CameraCapture
+            className="flex min-h-[132px] w-full flex-col items-start justify-center gap-2 rounded-2xl border border-teal-200 bg-white px-5 py-4 text-left text-base font-semibold text-teal-700 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={isLoading || filePreviews.length >= MAX_FILES}
+            description="Dùng camera của thiết bị"
+            label="Chụp ảnh trực tiếp"
+            onCapture={(file) => addFiles([file])}
+          />
+          <button
+            className="flex min-h-[132px] w-full flex-col items-start justify-center gap-2 rounded-2xl border border-cyan-200 bg-white px-5 py-4 text-left text-base font-semibold text-cyan-700 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={isLoading || filePreviews.length >= MAX_FILES}
+            onClick={() => fileInputRef.current?.click()}
+            type="button"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-50">
+              <Upload aria-hidden="true" className="h-5 w-5" />
+            </span>
+            <span>Tải ảnh hoặc PDF</span>
+            <span className="text-sm font-normal text-cyan-700/70">Chọn file có sẵn từ thiết bị</span>
+          </button>
+        </div>
         <input
           ref={fileInputRef}
           accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"

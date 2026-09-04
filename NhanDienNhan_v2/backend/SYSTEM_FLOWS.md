@@ -666,8 +666,11 @@ Search và fusion được cô lập trong orchestrator. Lỗi ở nhánh này k
   Manifest lưu `user_confirmed`, `user_correction` và `reviewed_at`; trạng thái
   `Không đạt` bắt buộc có nhận xét về lỗi cần chỉnh sửa.
 - Xóa trong admin là xóa mềm: backend rename nguyên thư mục interaction vào
-  `OCR_ARCHIVE_DIR/.trash/`. `.trash` không được liệt kê hay tự dọn; cần phục hồi
-  thủ công trên host nếu cần giữ lại interaction.
+  `OCR_ARCHIVE_DIR/.trash/`. Admin có màn hình thùng rác để liệt kê dung lượng
+  và gọi `DELETE /api/admin/ocr-history/trash/:trashId` hoặc
+  `POST /api/admin/ocr-history/trash/bulk-delete` nhằm xóa vĩnh viễn sau xác
+  nhận. API chỉ nhận mã entry `.trash` đã kiểm tra, không nhận đường dẫn file
+  system từ client. Không có tự động dọn hay phục hồi qua UI.
 - Các API admin hiện không có backend auth vì màn hình `/admin` chỉ kiểm tra tài
   khoản gán cứng ở frontend. Chúng không phù hợp để public Internet nếu archive
   chứa dữ liệu nhạy cảm; cần đặt lớp bảo vệ hạ tầng hoặc bổ sung auth backend trước

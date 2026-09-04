@@ -69,6 +69,21 @@ export interface OcrHistoryDetail {
   raw_output: unknown;
 }
 
+export interface OcrTrashItem {
+  trash_id: string;
+  trashed_at: string | null;
+  size_bytes: number;
+  item: OcrHistoryItem;
+}
+
+export interface OcrTrashListResponse {
+  items: OcrTrashItem[];
+  total: number;
+  total_size_bytes: number;
+  page: number;
+  page_size: number;
+}
+
 interface ApiSuccess<T> {
   success: true;
   data: T;
@@ -76,6 +91,11 @@ interface ApiSuccess<T> {
 
 interface BulkDeleteResponse {
   moved_ids: string[];
+  failed: Array<{ id: string; reason: "not_found" | "conflict" }>;
+}
+
+interface BulkPurgeResponse {
+  deleted_ids: string[];
   failed: Array<{ id: string; reason: "not_found" | "conflict" }>;
 }
 
@@ -152,6 +172,21 @@ export async function getOcrHistory(
   );
 }
 
+export function getOcrTrash(
+  page: number,
+  pageSize: number,
+  signal?: AbortSignal,
+): Promise<OcrTrashListResponse> {
+  const params = new URLSearchParams({
+    page: String(page),
+    page_size: String(pageSize),
+  });
+  return request<OcrTrashListResponse>(
+    `${API_BASE_URL}/api/admin/ocr-history/trash?${params.toString()}`,
+    { signal },
+  );
+}
+
 export function getOcrHistoryDetail(
   id: string,
   signal?: AbortSignal,
@@ -188,6 +223,26 @@ export function trashOcrHistoryBulk(ids: string[]): Promise<BulkDeleteResponse> 
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids }),
+    },
+  );
+}
+
+export function purgeOcrTrash(
+  trashId: string,
+): Promise<{ id: string; status: "deleted" }> {
+  return request<{ id: string; status: "deleted" }>(
+    `${API_BASE_URL}/api/admin/ocr-history/trash/${encodeURIComponent(trashId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function purgeOcrTrashBulk(trashIds: string[]): Promise<BulkPurgeResponse> {
+  return request<BulkPurgeResponse>(
+    `${API_BASE_URL}/api/admin/ocr-history/trash/bulk-delete`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ trash_ids: trashIds }),
     },
   );
 }

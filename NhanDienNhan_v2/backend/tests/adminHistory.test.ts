@@ -238,6 +238,56 @@ test("admin history routes return detail, stream files and move selected directo
       assert.deepEqual(bulk.data.moved_ids, ["route-two"]);
       assert.deepEqual(bulk.data.failed, [{ id: "missing-id", reason: "not_found" }]);
       assert.equal((await readdir(path.join(root, ".trash"))).length, 2);
+
+      const trashResponse = await fetch(`${server.origin}/api/admin/ocr-history/trash`);
+      const trash = (await trashResponse.json()) as {
+        data: {
+          total: number;
+          total_size_bytes: number;
+          items: Array<{ trash_id: string; item: { id: string } }>;
+        };
+      };
+      assert.equal(trashResponse.status, 200);
+      assert.equal(trash.data.total, 2);
+      assert.ok(trash.data.total_size_bytes > JPEG_BYTES.length);
+      assert.deepEqual(
+        trash.data.items.map((entry) => entry.item.id).sort(),
+        ["route-one", "route-two"],
+      );
+
+      const invalidPurgeResponse = await fetch(
+        `${server.origin}/api/admin/ocr-history/trash/bad%24entry`,
+        { method: "DELETE" },
+      );
+      assert.equal(invalidPurgeResponse.status, 400);
+
+      const firstTrashId = trash.data.items[0]!.trash_id;
+      const purgeResponse = await fetch(
+        `${server.origin}/api/admin/ocr-history/trash/${encodeURIComponent(firstTrashId)}`,
+        { method: "DELETE" },
+      );
+      assert.equal(purgeResponse.status, 200);
+
+      const remainingTrashId = trash.data.items[1]!.trash_id;
+      const missingTrashId =
+        "2026-09-03T083000000Z_00000000-0000-4000-8000-000000000000_missing-id";
+      const bulkPurgeResponse = await fetch(
+        `${server.origin}/api/admin/ocr-history/trash/bulk-delete`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ trash_ids: [remainingTrashId, missingTrashId] }),
+        },
+      );
+      const bulkPurge = (await bulkPurgeResponse.json()) as {
+        data: { deleted_ids: string[]; failed: Array<{ id: string; reason: string }> };
+      };
+      assert.equal(bulkPurgeResponse.status, 200);
+      assert.deepEqual(bulkPurge.data.deleted_ids, [remainingTrashId]);
+      assert.deepEqual(bulkPurge.data.failed, [
+        { id: missingTrashId, reason: "not_found" },
+      ]);
+      assert.deepEqual(await readdir(path.join(root, ".trash")), []);
     } finally {
       await server.close();
     }

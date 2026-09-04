@@ -23,6 +23,9 @@ import {
   getOcrHistory,
   getOcrHistoryDetail,
   getOcrHistoryFileUrl,
+  getOcrTrash,
+  purgeOcrTrash,
+  purgeOcrTrashBulk,
   reviewOcrHistory,
   trashOcrHistory,
   trashOcrHistoryBulk,
@@ -30,6 +33,7 @@ import {
   type OcrHistoryFilters,
   type OcrHistoryItem,
   type OcrHistoryStatus,
+  type OcrTrashItem,
 } from "../apis/adminApi";
 import { ArchivedOcrVisualResult } from "./ArchivedOcrVisualResult";
 
@@ -384,6 +388,230 @@ function HistoryDetailDialog({ id, onClose, onChanged }: HistoryDetailDialogProp
   );
 }
 
+interface TrashBinPanelProps {
+  onBack: () => void;
+  onLogout: () => void;
+}
+
+function TrashBinPanel({ onBack, onLogout }: TrashBinPanelProps) {
+  const [items, setItems] = useState<OcrTrashItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalSize, setTotalSize] = useState(0);
+  const [page, setPage] = useState(1);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [purging, setPurging] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const allVisibleSelected =
+    items.length > 0 && items.every((item) => selectedIds.has(item.trash_id));
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void getOcrTrash(page, PAGE_SIZE, controller.signal)
+      .then((data) => {
+        setItems(data.items);
+        setTotal(data.total);
+        setTotalSize(data.total_size_bytes);
+        if (page > 1 && data.items.length === 0 && data.total > 0) {
+          setPage(Math.max(1, Math.ceil(data.total / PAGE_SIZE)));
+        }
+      })
+      .catch((reason: unknown) => {
+        if (reason instanceof DOMException && reason.name === "AbortError") return;
+        setError(reason instanceof Error ? reason.message : "Không thể tải thùng rác.");
+      })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, [page, refreshKey]);
+
+  const reload = (preserveNotice = false) => {
+    setError("");
+    if (!preserveNotice) setNotice("");
+    setLoading(true);
+    setRefreshKey((current) => current + 1);
+  };
+
+  const toggleItem = (trashId: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(trashId)) next.delete(trashId);
+      else next.add(trashId);
+      return next;
+    });
+  };
+
+  const toggleVisible = () => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allVisibleSelected) {
+        items.forEach((item) => next.delete(item.trash_id));
+      } else {
+        items.forEach((item) => next.add(item.trash_id));
+      }
+      return next;
+    });
+  };
+
+  const purgeOne = async (item: OcrTrashItem) => {
+    if (!window.confirm(`Xóa vĩnh viễn ${item.item.id}? Dữ liệu này không thể khôi phục.`)) return;
+    setPurging(true);
+    setError("");
+    setNotice("");
+    try {
+      await purgeOcrTrash(item.trash_id);
+      setSelectedIds((current) => {
+        const next = new Set(current);
+        next.delete(item.trash_id);
+        return next;
+      });
+      setNotice("Đã xóa vĩnh viễn 1 bản ghi và các tệp đi kèm.");
+      reload(true);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không thể xóa vĩnh viễn bản ghi.");
+    } finally {
+      setPurging(false);
+    }
+  };
+
+  const purgeSelected = async () => {
+    const trashIds = [...selectedIds];
+    if (trashIds.length === 0) return;
+    if (!window.confirm(`Xóa vĩnh viễn ${trashIds.length} bản ghi đã chọn? Thao tác này không thể khôi phục.`)) return;
+    setPurging(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await purgeOcrTrashBulk(trashIds);
+      setSelectedIds(new Set(result.failed.map((failure) => failure.id)));
+      setNotice(
+        result.failed.length === 0
+          ? `Đã xóa vĩnh viễn ${result.deleted_ids.length} bản ghi.`
+          : `Đã xóa ${result.deleted_ids.length} bản ghi; ${result.failed.length} bản ghi không thể xử lý.`,
+      );
+      reload(true);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không thể xóa vĩnh viễn các bản ghi.");
+    } finally {
+      setPurging(false);
+    }
+  };
+
+  return (
+    <main className="min-h-screen bg-slate-100 text-slate-900">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-rose-600">OCR Admin</p>
+            <h1 className="text-xl font-bold">Thùng rác OCR</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              onClick={onBack}
+              type="button"
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              Lịch sử OCR
+            </button>
+            <button
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              onClick={onLogout}
+              type="button"
+            >
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+              Đăng xuất
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
+        <section className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+          <p className="font-semibold">Xóa vĩnh viễn không thể khôi phục.</p>
+          <p className="mt-1 text-rose-800">Hãy kiểm tra kỹ trước khi xóa để giải phóng dung lượng archive.</p>
+        </section>
+
+        {error && (
+          <div className="flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">
+            <span>{error}</span>
+            <button className="shrink-0 font-semibold underline" onClick={() => reload()} type="button">Thử lại</button>
+          </div>
+        )}
+        {notice && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{notice}</div>}
+
+        <section className="overflow-hidden rounded-xl bg-white shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-5">
+            <p className="text-sm text-slate-600">
+              <strong className="text-slate-900">{total}</strong> bản ghi · {formatBytes(totalSize)}
+            </p>
+            <div className="flex items-center gap-2">
+              {selectedIds.size > 0 && (
+                <button
+                  className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={purging}
+                  onClick={() => void purgeSelected()}
+                  type="button"
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  Xóa vĩnh viễn ({selectedIds.size})
+                </button>
+              )}
+              <button
+                aria-label="Tải lại"
+                className="rounded-lg border border-slate-300 p-2 text-slate-600 transition hover:bg-slate-50"
+                onClick={() => reload()}
+                type="button"
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="w-12 px-4 py-3"><input aria-label="Chọn tất cả bản ghi thùng rác trên trang" checked={allVisibleSelected} onChange={toggleVisible} type="checkbox" /></th>
+                  <th className="px-4 py-3">Đã xóa lúc</th>
+                  <th className="px-4 py-3">Bản ghi OCR</th>
+                  <th className="px-4 py-3">Tệp</th>
+                  <th className="px-4 py-3">Dung lượng</th>
+                  <th className="px-4 py-3"><span className="sr-only">Thao tác</span></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loading && <tr><td className="px-4 py-12 text-center text-slate-500" colSpan={6}><LoaderCircle className="mr-2 inline h-4 w-4 animate-spin" />Đang tải thùng rác…</td></tr>}
+                {!loading && items.length === 0 && <tr><td className="px-4 py-12 text-center text-slate-500" colSpan={6}>Thùng rác đang trống.</td></tr>}
+                {!loading && items.map((entry) => (
+                  <tr className="align-top hover:bg-slate-50" key={entry.trash_id}>
+                    <td className="px-4 py-4"><input aria-label={`Chọn ${entry.item.id}`} checked={selectedIds.has(entry.trash_id)} onChange={() => toggleItem(entry.trash_id)} type="checkbox" /></td>
+                    <td className="whitespace-nowrap px-4 py-4 text-slate-700">{formatDate(entry.trashed_at)}</td>
+                    <td className="px-4 py-4"><p className="font-medium text-slate-900">{interactionLabels[entry.item.loai_tuong_tac ?? ""] ?? entry.item.loai_tuong_tac ?? "Không rõ"}</p><p className="mt-1 text-xs text-slate-500">{entry.item.id} · tạo {formatDate(entry.item.created_at)}</p></td>
+                    <td className="max-w-72 px-4 py-4"><p className="truncate font-medium text-slate-800" title={entry.item.files[0]?.original_name}>{entry.item.files[0]?.original_name ?? "Không có tệp"}</p><p className="mt-1 text-xs text-slate-500">{entry.item.file_count} tệp</p></td>
+                    <td className="whitespace-nowrap px-4 py-4 font-medium text-slate-700">{formatBytes(entry.size_bytes)}</td>
+                    <td className="px-4 py-4"><button aria-label={`Xóa vĩnh viễn ${entry.item.id}`} className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50" disabled={purging} onClick={() => void purgeOne(entry)} type="button"><Trash2 className="h-4 w-4" aria-hidden="true" />Xóa vĩnh viễn</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <footer className="flex items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 sm:px-5">
+            <p className="text-sm text-slate-500">Trang {page} / {totalPages}</p>
+            <div className="flex gap-2">
+              <button aria-label="Trang trước" className="rounded-lg border border-slate-300 p-2 disabled:cursor-not-allowed disabled:opacity-50" disabled={loading || page <= 1} onClick={() => setPage((current) => current - 1)} type="button"><ChevronLeft className="h-4 w-4" /></button>
+              <button aria-label="Trang sau" className="rounded-lg border border-slate-300 p-2 disabled:cursor-not-allowed disabled:opacity-50" disabled={loading || page >= totalPages} onClick={() => setPage((current) => current + 1)} type="button"><ChevronRight className="h-4 w-4" /></button>
+            </div>
+          </footer>
+        </section>
+      </div>
+    </main>
+  );
+}
+
 export function AdminPanel({ onLogout }: AdminPanelProps) {
   const [draftFilters, setDraftFilters] = useState<OcrHistoryFilters>({});
   const [filters, setFilters] = useState<OcrHistoryFilters>({});
@@ -397,6 +625,7 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [showTrash, setShowTrash] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const allVisibleSelected = items.length > 0 && items.every((item) => selectedIds.has(item.id));
@@ -502,6 +731,10 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
     }
   };
 
+  if (showTrash) {
+    return <TrashBinPanel onBack={() => setShowTrash(false)} onLogout={onLogout} />;
+  }
+
   return (
     <main className="min-h-screen bg-slate-100 text-slate-900">
       <header className="border-b border-slate-200 bg-white">
@@ -510,14 +743,24 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
             <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">OCR Admin</p>
             <h1 className="text-xl font-bold">Lịch sử OCR</h1>
           </div>
-          <button
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            onClick={onLogout}
-            type="button"
-          >
-            <LogOut className="h-4 w-4" aria-hidden="true" />
-            Đăng xuất
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+              onClick={() => setShowTrash(true)}
+              type="button"
+            >
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+              Thùng rác
+            </button>
+            <button
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              onClick={onLogout}
+              type="button"
+            >
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+              Đăng xuất
+            </button>
+          </div>
         </div>
       </header>
 

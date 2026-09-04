@@ -63,7 +63,10 @@ Frontend có trang `/admin`, đăng nhập bằng giá trị `VITE_ADMIN_USERNAM
 `VITE_ADMIN_PASSWORD` được đặt tại lúc build và chỉ lưu trạng thái ở
 `sessionStorage` của tab hiện tại. Trang gọi các API `/api/admin/ocr-history`
 để list/detail, preview hoặc tải file archive; xóa sẽ rename interaction vào
-`/srv/ocr-data/.trash` để có thể phục hồi thủ công.
+`/srv/ocr-data/.trash` để có thể phục hồi thủ công. Mục **Thùng rác** trong
+Admin hiển thị dung lượng lưu trữ và cho phép xóa vĩnh viễn từng mục hoặc theo
+lô, sau bước xác nhận. Thao tác này không thể phục hồi và không có tự động dọn
+thùng rác.
 
 Admin cũng có thể xét duyệt `Đạt` hoặc `Không đạt` cho từng interaction. Thao tác
 này cập nhật `user_confirmed`, `user_correction`, `reviewed_at` trong

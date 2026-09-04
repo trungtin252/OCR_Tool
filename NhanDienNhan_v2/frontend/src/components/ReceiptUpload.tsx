@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Upload, X, FileText, Image } from "lucide-react";
+import { CameraCapture } from "./CameraCapture";
 
 const MAX_FILES = 10;
 
@@ -151,22 +152,41 @@ export function ReceiptUpload({
 
       {/* Drop Zone */}
       <div
-        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
+        className={`rounded-2xl border p-4 shadow-sm transition-all sm:p-5 ${
           isDragOver
-            ? "border-amber-500 bg-amber-50"
-            : "border-amber-400 bg-orange-50 hover:bg-amber-50"
+            ? "border-amber-400 bg-amber-50"
+            : "border-amber-100 bg-gradient-to-br from-amber-50/80 to-white"
         } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
       >
-        <Upload className="mx-auto h-12 w-12 text-amber-600 mb-3" />
-        <div className="text-base font-semibold text-gray-900">
-          Nhấp hoặc kéo file vào đây
+        <div className="mb-4">
+          <p className="text-sm font-semibold text-slate-900">Thêm chứng từ</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Chụp chứng từ, chọn file có sẵn hoặc kéo thả vào vùng này.
+          </p>
         </div>
-        <div className="text-sm text-gray-500 mt-1">
-          Hỗ trợ ảnh (JPG, PNG, WebP) và PDF — tối đa {MAX_FILES} file
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <CameraCapture
+            className="flex min-h-[132px] w-full flex-col items-start justify-center gap-2 rounded-2xl border border-amber-200 bg-white px-5 py-4 text-left text-base font-semibold text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={isLoading || filePreviews.length >= MAX_FILES}
+            description="Dùng camera của thiết bị"
+            label="Chụp ảnh trực tiếp"
+            onCapture={(file) => addFiles([file])}
+          />
+          <button
+            className="flex min-h-[132px] w-full flex-col items-start justify-center gap-2 rounded-2xl border border-orange-200 bg-white px-5 py-4 text-left text-base font-semibold text-orange-700 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={isLoading || filePreviews.length >= MAX_FILES}
+            onClick={() => fileInputRef.current?.click()}
+            type="button"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-50">
+              <Upload aria-hidden="true" className="h-5 w-5" />
+            </span>
+            <span>Tải ảnh hoặc PDF</span>
+            <span className="text-sm font-normal text-orange-700/70">Chọn file có sẵn từ thiết bị</span>
+          </button>
         </div>
         <input
           ref={fileInputRef}
